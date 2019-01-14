@@ -1,1 +1,1 @@
-# Model_Marine_RNA_Seq_and_functionalAnnotation
+# Model Marine RNASeq and Functional Annotation
