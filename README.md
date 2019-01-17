@@ -30,4 +30,5 @@ Contents
 
 
 
-
+1. Overview  
+In this tutorial we will be analyzing 2 liver samples from the large yellow croaker (Larimichthys crocea) from the NCBI BioProject 
