@@ -58,5 +58,5 @@ fastq-dump SRR1964644
 fastq-dump SRR1964645  
 ```
 
-The full script for slurm scheduler can be found in the raw_data folder by the name [fastq_dump_xanadu.sh](/raw_data/fastq_dump_xanadu.sh).  
+The full script for slurm scheduler can be found in the raw_data folder by the name [fastq_dump_xanadu.sh](/raw_data/fastqc_dump_xanadu.sh).  
 
