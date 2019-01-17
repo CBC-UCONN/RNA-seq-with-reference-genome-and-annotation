@@ -14,6 +14,11 @@ Contents
 		1. Common plots for differential expression analysis
 		2. Using DESeq2
 	7. EnTAP: Functional Annotation for Genomes
-	8. Integrating the DE Results with the Annotation Results
+	8. Integrating the DE Results with the Annotation Results  
+
+Contents
+1. Overview
+2. Accessing the Data using SRA-Toolkit  
+
 
 
