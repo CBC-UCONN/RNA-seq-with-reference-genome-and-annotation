@@ -42,5 +42,20 @@ git clone https://github.com/golden75/Model_Marine_RNA_Seq_and_functionalAnnotat
 
 ### 2. Accessing the Data using SRA-Toolkit    
 
+
 We will be downloading our data from the sequence-read-archives (SRA), a comprehensive collection of sequenced genetic data submitted to the NCBI by experimenters. The beauty of the SRA is the ease with which genetic data becomes accessible to any scientist with an internet connection, available for download in a variety of formats. Each run in the SRA has a unique identifier. The run may be downloaded using a module of software called the "sratoolkit" and its unique identifier. There are a variety of commands in the sratoolkit, which I invite you to investigate for yourself at https://www.ncbi.nlm.nih.gov/books/NBK158900/.  
 
+The data may be accessed at the following web page: https://www.ncbi.nlm.nih.gov/bioproject/28084  
+LB2A : SRR1964642, SRR1964643  
+LC2A : SRR1964644, SRR1964645  
+
+We can download the SRA data using SRA-Toolkit using the following command:  
+```bash
+module load sratoolkit/2.8.1  
+fastq-dump SRR1964642  
+fastq-dump SRR1964643
+fastq-dump SRR1964644  
+fastq-dump SRR1964645  
+```
+
+The full script for slurm scheduler can be found in the raw_data folder by the name fastq_dump_xanadu.sh.
