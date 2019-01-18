@@ -822,4 +822,37 @@ entap/
 
 ## 9. Integrating the DE Results with the Annotation Results  
 
+For this step you need to copy the following two files from the entap run to your computer, which is “GeneID_proteinID.txt” and “final_annotations_lvl0_contam.tsv” file from the previous run. The two files are located at:  
+
+```bash
+entap/
+|-- GeneID_proteinID.txt
+|-- outfiles/
+|   |-- final_annotations_lvl0_contam.tsv
+```
+
+Then we are going to integrate the annotations to the DE genes using the following R code:  
+
+```R 
+library("readr")
+#read the csv file with DE genes
+csv <- read.csv("Croaker_DESeq2-results-with-normalized.csv")
+#read the file with geneID to proteinID relationship
+gene_protein_list <- read.table("GeneID_proteinID.txt")
+names(gene_protein_list) <- c('GeneID','table', 'tableID','protein', 'protienID')
+gene_protein_list <- gene_protein_list[,c("GeneID","protienID")]
+
+#merging the two dataframes
+DEgene_proteinID <- merge(csv, gene_protein_list, by.x="gene", by.y="GeneID")
+
+#read_tsv
+annotation_file <- read_tsv('final_annotations_lvl0.tsv', col_names = TRUE)
+names(annotation_file)[1] <- 'query_seqID'
+
+#merging the DEgene_proteinID with annotation_file dataframes
+annotated_DEgenes <- merge(DEgene_proteinID, annotation_file, by.x="protienID", by.y="query_seqID")
+View(annotated_DEgenes)
+write.csv(annotated_DEgenes, file = paste0("annotated_DEgenes_final.csv"))
+``` 
+
 
