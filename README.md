@@ -739,4 +739,87 @@ dev.off()
 
 Once the differentially expressed genes have been identified, we need to annotate the genes to identify the function. We will take the top 9 genes from the csv file to do a quick annotation. Will be useing the head command on the file, which will take the first 10 lines, and pipe it into a new file called temp.csv
 
+```bash
+head -n 10 Croaker_DESeq2-results-with-normalized.csv > temp.csv 
+```
+
+Then we are going to use a script which will link the geneID’s to the proteinID’s using the genome annotation in [tabular format](https://www.ncbi.nlm.nih.gov/genome/proteins/12197?genome_assembly_id=229515) (ProteinTable12197_229515.txt) which can be downloaded from the NCBI website.  
+
+So the script will take the gene id’s from the temp.csv file and match it to the ProteinTable12197_229515.txt file and get the corresponding protein id’s. Then it will use that protein id to grab the fasta sequence from the protein fasta file.  
+
+```bash
+python csvGeneID2fasta.py temp.csv ProteinTable12197_229515.txt GCF_000972845.1_L_crocea_1.0_protein.faa > GeneID_proteinID.txt
+```  
+
+The program usage:
+```bash
+Usage:
+      python csvGeneID2fasta.py [DE gene csv file] [tabular txt file] [fasta file]
+```  
+
+It will create a fasta file called “fasta_out.fasta” which will include the protein fasta sequences which we will be using for the enTAP job.  
+
+```bash
+entap/
+|-- Croaker_DESeq2-results-with-normalized.csv
+|-- csvGeneID2fasta.py
+|-- temp.csv
+|-- GCF_000972845.1_L_crocea_1.0_protein.faa
+|-- ProteinTable12197_229515.txt
+|-- GeneID_proteinID.txt
+`-- fasta_out.fasta
+```  
+
+Once we have the fasta file with the protein sequences we can run the enTAP program to grab the functional annotations using the following command:
+
+```bash
+module load anaconda/2.4.0
+module load perl/5.24.0
+module load diamond/0.9.19
+module load eggnog-mapper/0.99.1
+module load interproscan/5.25-64.0
+
+/UCHC/LABS/Wegrzyn/EnTAP/EnTAP --runP -i fasta_out.fasta -d /isg/shared/databases/Diamond/RefSeq/vertebrate_other.protein.faa.88.dmnd -d /isg/shared/databases/Diamond/Uniprot/uniprot_sprot.dmnd --ontology 0  --threads 16
+```  
+
+Usage of the entap program:
+```bash
+Required Flags:
+--runP      with a protein input, frame selection will not be ran and annotation will be executed with protein sequences (blastp)
+-i          Path to the transcriptome file (either nucleotide or protein)
+-d          Specify up to 5 DIAMOND indexed (.dmnd) databases to run similarity search against
+
+Optional:
+-threads    Number of threads
+--ontology  0 - EggNOG (default)
+```
+
+The full script for slurm scheduler can be found in the entap folder which is called [entap.sh](/entap/entap.sh)  
+
+Once the job is done it will create a folder called “outfiles” which will contain the output of the program.  
+```bash
+entap/
+|-- outfiles/
+|   |-- debug_2018.2.25-2h49m29s.txt
+|   |-- entap_out/
+|   |-- final_annotated.faa
+|   |-- final_annotations_lvl0_contam.tsv
+|   |-- final_annotations_lvl0_no_contam.tsv
+|   |-- final_annotations_lvl0.tsv
+|   |-- final_annotations_lvl3_contam.tsv
+|   |-- final_annotations_lvl3_no_contam.tsv
+|   |-- final_annotations_lvl3.tsv
+|   |-- final_annotations_lvl4_contam.tsv
+|   |-- final_annotations_lvl4_no_contam.tsv
+|   |-- final_annotations_lvl4.tsv
+|   |-- final_unannotated.faa
+|   |-- final_unannotated.fnn
+|   |-- log_file_2018.2.25-2h49m29s.txt
+|   |-- ontology/
+|   `-- similarity_search/
+```  
+
+
+## 9. Integrating the DE Results with the Annotation Results  
+
 
