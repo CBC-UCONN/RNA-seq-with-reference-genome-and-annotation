@@ -757,6 +757,8 @@ Usage:
       python csvGeneID2fasta.py [DE gene csv file] [tabular txt file] [fasta file]
 ```  
 
+The full script is called [csvGeneID2fasta.sh](/entap/csvGeneID2fasta.sh) which is located at entap folder.
+
 It will create a fasta file called “fasta_out.fasta” which will include the protein fasta sequences which we will be using for the enTAP job.  
 
 ```bash
