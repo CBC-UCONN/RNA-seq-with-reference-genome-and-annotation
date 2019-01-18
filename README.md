@@ -197,4 +197,52 @@ FastQ records discarded: 2159897
 ## 3. FASTQC Before and After Quality Control
 It is helpful to see how the quality of the data has changed after using sickle. To do this, we will be using the commandline versions of fastqc and MultiQC. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
 
+```bash
+dir="before"
+
+module load fastqc/0.11.5
+fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964642.fastq
+fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964643.fastq
+fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq
+fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq
+```  
+
+The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) which is located in fastqc folder.  
+
+The same command can be run on the fastq files after the trimming using fastqc program, and the comand will look like:
+```bash
+dir="after"
+
+module load fastqc/0.11.5
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964642.fastq -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964643.fastq -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964644.fastq -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964645.fastq -t 8
+```  
+
+The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in fastqc folder.  
+ 
+This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc** will look like:  
+```
+fastqc/
+├── after
+│   ├── trimmed_LB2A_SRR1964642_fastqc.html
+│   ├── trimmed_LB2A_SRR1964642_fastqc.zip
+│   ├── trimmed_LB2A_SRR1964643_fastqc.html
+│   ├── trimmed_LB2A_SRR1964643_fastqc.zip
+│   ├── trimmed_LC2A_SRR1964644_fastqc.html
+│   ├── trimmed_LC2A_SRR1964644_fastqc.zip
+│   ├── trimmed_LC2A_SRR1964645_fastqc.html
+│   └── trimmed_LC2A_SRR1964645_fastqc.zip
+├── before
+│   ├── LB2A_SRR1964642_fastqc.html
+│   ├── LB2A_SRR1964642_fastqc.zip
+│   ├── LB2A_SRR1964643_fastqc.html
+│   ├── LB2A_SRR1964643_fastqc.zip
+│   ├── LC2A_SRR1964644_fastqc.html
+│   ├── LC2A_SRR1964644_fastqc.zip
+│   ├── LC2A_SRR1964645_fastqc.html
+│   └── LC2A_SRR1964645_fastqc.zip
+```  
+
 
