@@ -416,5 +416,71 @@ mapping/
 ```
 
 
+## 6. Generating Total Read Counts from Alignment using htseq-count  
+
+Now we will be using the htseq-count program to count the reads which is mapping to the genome.  
+```bash
+htseq-count -s no -r pos -t gene -i Dbxref -f bam ../mapping/sort_trim_LB2A_SRR1964642.bam GCF_000972845.1_L_crocea_1.0_genomic.gff > LB2A_SRR1964642.counts
+```
+
+Command discription for the htseq-count will look like :  
+```bash
+Usage: htseq-count [options] alignment_file gff_file
+Options:
+  -f SAMTYPE, --format=SAMTYPE
+                        type of  data, either 'sam' or 'bam'
+                        (default: sam)
+  -r ORDER, --order=ORDER
+                        'pos' or 'name'. Sorting order of
+                        (default: name). Paired-end sequencing data must be
+                        sorted either by position or by read name, and the
+                        sorting order must be specified. Ignored for single-
+                        end data.
+  -s STRANDED, --stranded=STRANDED
+                        whether the data is from a strand-specific assay.
+                        Specify 'yes', 'no', or 'reverse' (default: yes).
+                        'reverse' means 'yes' with reversed strand
+                        interpretation
+  -t FEATURETYPE, --type=FEATURETYPE
+                        feature type (3rd column in GFF file) to be used, all
+                        features of other type are ignored (default, suitable
+                        for Ensembl GTF files: exon)
+  -i IDATTR, --idattr=IDATTR
+                        GFF attribute to be used as feature ID (default,
+                        suitable for Ensembl GTF files: gene_id)
+``` 
+
+The above command should be repeated for all other BAM files as well. The full script for slurm scheduler can be found in the **count** folder which is called [htseq_count.sh](/count/htseq_count.sh).  
+
+Once all the bam files have been counted, we will be having the following files in the count directory.  
+```bash
+counts/
+|-- htseq.sh
+|-- sort_trim_LB2A_SRR1964642.counts
+|-- sort_trim_LB2A_SRR1964643.counts
+|-- sort_trim_LC2A_SRR1964644.counts
+`-- sort_trim_LC2A_SRR1964645.counts
+```  
+
+Let's have a look at the contents of a counts file:
+```bash
+head sort_trim_LB2A_SRR1964642.counts
+```
+
+which will look like:  
+```
+GeneID:104917625	18
+GeneID:104917626	7
+GeneID:104917627	0
+GeneID:104917628	199
+GeneID:104917629	71
+GeneID:104917630	23
+GeneID:104917631	111
+GeneID:104917632	25
+GeneID:104917634	276
+GeneID:104917635	254
+``` 
+
+We see the layout is quite straightforward, with two columns separated by a tab. The first column identifies the gene from the eponymous sample and the second column is the number of mRNA strands from the row's gene found in the sample. This setup is perfect for our next task, identifying differentially expressed genes.  
 
 
