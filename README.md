@@ -484,3 +484,26 @@ GeneID:104917635	254
 We see the layout is quite straightforward, with two columns separated by a tab. The first column identifies the gene from the eponymous sample and the second column is the number of mRNA strands from the row's gene found in the sample. This setup is perfect for our next task, identifying differentially expressed genes.  
 
 
+## 7. Pirewise Differential Expression with Counts in R using DESeq2  
+
+This part of the tutorial must be run locally. To download the appropriate files to your local computer, we will use the secure copy client, "scp". Close your Xanadu connection and run the following code:  
+
+```bash
+scp user_name@transfer.cam.uchc.edu:/Path-to-counts/*.counts /path-to-your-local-directory/  
+```  
+
+
+### Common plots for differential expression analysis  
+
+To identify differentially expressed genes, We will use the DESeq2 package within Bioconductor in R to perform normalization and statistical analysis of differences among our two sample groups. For our differential expression analysis, we will be using three types of graphs to visualize the data: Bland-Altman (MA), heatmap, and PCA plots.  
+
+### Bland-Altman(MA) Plot  
+The Bland-Altman plot is a binary analysis, gathering information on the relationships between two-sets of data. Because we have four sets of data, we will be breaking our data into two separate groups (LB2A and LC2A), then generating two superimposed plots comparing each member of the two groups to each member of the other group. Before we go further, what is a Bland-Altman plot? An MA plot is the comparison of the log-differences for two datasets to the log-averages.  
+
+```
+M = log2(D1/D2) = log2(D1)-log2(D2)
+A = ½log2(D1D2) = ½(log2(D1)+log2(D2))
+``` 
+
+
+
