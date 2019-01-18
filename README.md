@@ -266,3 +266,48 @@ The last index at which we are going to look is the "Overrepresented Sequences" 
 This is simply a list of sequences which appear disproportionately in our reads file. The reads file actually includes the primer sequences for this exact reason. When fastqc calculates a sequence which appears many times beyond the expected distribution, it may check the primer sequences in the reads file to determine if the sequence is a primer. If the sequence is not a primer, the result will be returned as "No Hit". Sequences which are returned as "No Hit" are most likely highly expressed genes.  
 
 
+## 5. Aligning Reads to a Genome using hisat2  
+
+Building an Index:  
+HISAT2 is a fast and sensitive aligner for mapping next generation sequencing reads against a reference genome.
+In order to map the reads to a reference genome, first we must download the reference genome! Then we must make an index file. We will be downloading the reference genome (https://www.ncbi.nlm.nih.gov/genome/12197) from the ncbi database, using the wget command.  
+
+```bash
+wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.1_L_crocea_1.0/GCF_000972845.1_L_crocea_1.0_genomic.fna.gz
+gunzip GCF_000972845.1_L_crocea_1.0_genomic.fna.gz
+```
+
+We will use the hisat2-build option to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together build the index. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigatable way with pointers to the location of the information you seek within the encylopedia. Genome indexing is thus the structuring of a genome such that it is ordered in an easily navigatable way with pointers to where we can find whichever gene is being aligned. The genome index along with the trimmed fasta files are all you need to align the reads to the reference genome (the build command is included in the genome_indexing_and_alignment files, so it is not necessary to run now).  
+
+```bash
+module load hisat2/2.0.5
+hisat2-build -p 4 GCF_000972845.1_L_crocea_1.0_genomic.fna L_crocea
+```  
+
+```bash
+Usage: hisat2-build [options] <reference_in> <bt2_index_base>
+reference_in                comma-separated list of files with ref sequences
+hisat2_index_base           write ht2 data to files with this dir/basename
+
+Options:
+    -p                      number of threads
+```
+
+The full script for slurm scheduler can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh)  
+
+After running the script, the following files will be generated as part of the index.  To refer to the index for  mapping the reads in the next step, you will use the file prefix, which in this case is: L_crocea  
+```bash
+index/
+|-- GCF_000972845.1_L_crocea_1.0_genomic.fna
+|-- hisat2_index.sh
+|-- L_crocea.1.ht2
+|-- L_crocea.2.ht2
+|-- L_crocea.3.ht2
+|-- L_crocea.4.ht2
+|-- L_crocea.5.ht2
+|-- L_crocea.6.ht2
+|-- L_crocea.7.ht2
+`-- L_crocea.8.ht2
+```
+
+
