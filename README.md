@@ -245,4 +245,24 @@ fastqc/
 │   └── LC2A_SRR1964645_fastqc.zip
 ```  
 
+fastqc will create the files "trimmed_file_fastqc.html". To have a look at one, we need to move all of our "trimmed_file_fastqc.html" files into a single directory, and then secure copy that folder to our local directory. Then, we may open our files! If that seems like too much work for you, you may open the files directly through this github. Simply click on any "html" file and you may view it in your browser immediately. Because of this, the steps mentioned above will not be placed in this tutorial.  
+
+Let's have a look at the file format from fastqc and multiqc. When loading the fastqc file, you will be greeted with this screen  
+![](/images/fastqc1.png)  
+
+There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequences fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that sickle had not run properly. Let's look at the next index in the file:  
+
+![](/images/fastqc2.png)  
+
+This screen is simply a box-and-whiskers plot of our quality scores per base pair. Note that there is a large variance and lower mean scores (but still about in our desired range) for base pairs 1-5. These are the primer sequences! I will leave it to you to ponder the behavior of this graph. If you're stumped, you may want to learn how Illumina sequencing works.  
+
+![](/images/fastqc3.png)  
+
+This index is simply the total number of base pairs (y-axis) which have a given quality score (x-axis). This plot is discontinuous and discrete, and should you calculate the Riemann sum the result is the total number of base pairs present across all reads.  
+
+The last index at which we are going to look is the "Overrepresented Sequences" index:  
+![](images/fastqc4.png)  
+
+This is simply a list of sequences which appear disproportionately in our reads file. The reads file actually includes the primer sequences for this exact reason. When fastqc calculates a sequence which appears many times beyond the expected distribution, it may check the primer sequences in the reads file to determine if the sequence is a primer. If the sequence is not a primer, the result will be returned as "No Hit". Sequences which are returned as "No Hit" are most likely highly expressed genes.  
+
 
