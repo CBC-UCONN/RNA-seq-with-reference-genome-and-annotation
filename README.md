@@ -310,4 +310,111 @@ index/
 `-- L_crocea.8.ht2
 ```
 
+### Aligning the reads using HISAT2  
+
+Once we have created the index, the next step is to align the reads with HISAT2 using the index we created. The program will give the output in SAM format. We will not delve into the intricacies of the SAM format here, but it is recommended to peruse https://en.wikipedia.org/wiki/SAM_(file_format) again to garner a greater understanding. We align our reads with the following code:  
+
+```bash
+Usage: hisat2 [options]* -x <ht2-idx>  [-S <sam>]
+-x <ht2-idx>        path to the Index-filename-prefix (minus trailing .X.ht2) 
+
+Options:
+-q                  query input files are FASTQ .fq/.fastq (default)
+-p                  number threads
+--dta               reports alignments tailored for transcript assemblers
+```
+
+Command for aligning the reads using hisat:
+```bash
+module load hisat2/2.0.5
+
+hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LB2A_SRR1964642.fastq -S trimmed_LB2A_SRR1964642.sam
+```  
+
+The full script for slurm scheduler can be found in the **align** folder by the name [align.sh](/align/align.sh)  
+
+Once the mapping have been completed, the file structure is as follows:  
+```bash
+mapping/
+|-- mapping.sh
+|-- trim_LB2A_SRR1964642.sam
+|-- trim_LB2A_SRR1964643.sam
+|-- trim_LC2A_SRR1964644.sam
+`-- trim_LC2A_SRR1964645.sam
+```  
+
+When HISAT2 completes its run, it will summarize each of it’s alignments, and it is written to the standard error file, which can be find in the same folder once the run is completed.  
+```
+21799606 reads; of these:
+  21799606 (100.00%) were unpaired; of these:
+    1678851 (7.70%) aligned 0 times
+    15828295 (72.61%) aligned exactly 1 time
+    4292460 (19.69%) aligned >1 times
+92.30% overall alignment rate
+```  
+
+Let's have a look at the SAM file:
+```bash
+head trimmed_LB2A_SRR1964642.sam
+```
+
+which will give:
+```bash
+@HD VN:1.0 SO:unsorted
+@SQ SN:NW_017607850.1 LN:6737
+@SQ SN:NW_017607851.1 LN:5396
+@SQ SN:NW_017607852.1 LN:5050
+@SQ SN:NW_017607853.1 LN:5873
+@SQ SN:NW_017607854.1 LN:5692
+@SQ SN:NW_017607855.1 LN:11509
+@SQ SN:NW_017607856.1 LN:12722
+@SQ SN:NW_017607857.1 LN:42555
+@SQ SN:NW_017607858.1 LN:11917
+```
+
+After reading up on the SAM file format, you know that the "@" sign means that we are in the headings section, not the alignment section! The sam file is quite large so there is little purpose in scrolling to find the alignments section (the file is also much too large for using the "grep" command to locate the alignment section). Because of the density of the sam file, it is compressed to binary to create a more easily tractable file for manipulation by future programs.  
+
+The sam file then need to be converted in to bam format;  
+```bash
+samtools view -@ 4 -uhS trim_LB2A_SRR1964642.sam | samtools sort -@ 4 - sort_trim_LB2A_SRR1964642
+```  
+
+The command discription for the samtools is given below:
+```bash
+Usage: samtools [command] [options] in.sam
+Command:
+view     prints all alignments in the specified input alignment file (in SAM, BAM, or CRAM format) to standard output in SAM format 
+
+Options:
+-h      Include the header in the output
+-S      Indicate the input was in SAM format
+-u      Output uncompressed BAM. This option saves time spent on compression/decompression and is thus preferred when the output is piped to another samtools command
+-@      Number of processors
+
+Usage: samtools [command] [-o out.bam]
+Command:
+sort    Sort alignments by leftmost coordinates
+
+-o      Write the final sorted output to FILE, rather than to standard output.
+```  
+
+Alternatively the sort function converts SAM files to BAM automatically. Therefore, we can cut through most of these options and do a simple "samtools sort -o <output.bam> <inupt.sam>. So we can also write the following command as well:  
+```bash
+samtools sort -@ 4 -o sort_trim_LB2A_SRR1964642.bam trimmed_LB2A_SRR1964642.sam
+``` 
+
+The full script for slurm scheduler can be found in the **align** folder by the name [sam2bam.sh](/align/sam2bam.sh)  
+
+Once the conversion is done you will have the following files in the directory.  
+```bash  
+mapping/
+|-- sam2bam.sh
+|-- sort_trim_LB2A_SRR1964642.bam
+|-- sort_trim_LB2A_SRR1964643.bam
+|-- sort_trim_LC2A_SRR1964644.bam
+|-- sort_trim_LC2A_SRR1964645.bam
+```
+
+
+
 
