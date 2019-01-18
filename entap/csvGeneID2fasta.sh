@@ -10,7 +10,7 @@
 
 echo `hostname`
 
-#head -n 10 Croaker_DESeq2-results-with-normalized.csv > temp.csv
+head -n 10 Croaker_DESeq2-results-with-normalized.csv > temp.csv
 
 module load biopython/1.70
 
