@@ -117,4 +117,96 @@ We see that for our first three runs we have information about the sampled read 
 
 ## 3. Quality Control Using Sickle  
 
+Sickle performs quality control on illumina paired-end and single-end short reads data. To check the options provided by sickle program:   
+```bash
+module load sickle
+```
+
+which will load the sickle program and to check the usage, just type `sickle` on the terminal window.  
+```bash 
+Usage: sickle  [options]
+
+Command:
+pe	paired-end sequence trimming
+se	single-end sequence trimming
+
+--help, display this help and exit
+--version, output version  Information and exit
+```  
+
+Since we have single end sequences, typing `sickle se` will give the single-end-read options:
+```bash
+Usage: sickle se [options] -f  -t  -o 
+
+Options:
+-f, --fastq-file, Input fastq file (required)
+-t, --qual-type, Type of quality values (solexa (CASAVA < 1.3), illumina (CASAVA 1.3 to 1.7), sanger (which is CASAVA >= 1.8)) (required)
+-o, --output-file, Output trimmed fastq file (required)
+-q, --qual-threshold, Threshold for trimming based on average quality in a window. Default 20.
+-l, --length-threshold, Threshold to keep a read based on length after trimming. Default 20.
+-x, --no-fiveprime, Don't do five prime trimming.
+-n, --trunc-n, Truncate sequences at position of first N.
+-g, --gzip-output, Output gzipped files.
+--quiet, Don't print out any trimming  Information
+--help, display this help and exit
+--version, output version  Information and exit
+```  
+
+The quality may be any score from 0 to 40. The default of 20 is much too low for a robust analysis. We want to select only reads with a quality of 35 or better. Additionally, the desired length of each read is 50bp. Again, we see that a default of 20 is much too low for analysis confidence. We want to select only reads whose lengths exceed 45bp. Lastly, we must know the scoring type. While the quality type is not listed on the SRA pages, most SRA reads use the "sanger" quality type. Unless explicitly stated, try running sickle using the sanger qualities. If an error is returned, try illumina. If another error is returned, lastly try solexa.  
+
+Let's put all of this together for our sickle script using our downloaded fastq files:
+```bash
+module load sickle/1.33
+
+sickle se -f ../raw_data/LB2A_SRR1964642.fastq -t sanger -o trimmed_LB2A_SRR1964642.fastq -q 30 -l 50
+sickle se -f ../raw_data/LB2A_SRR1964643.fastq -t sanger -o trimmed_LB2A_SRR1964643.fastq -q 30 -l 50
+sickle se -f ../raw_data/LC2A_SRR1964644.fastq -t sanger -o trimmed_LC2A_SRR1964644.fastq -q 30 -l 50
+sickle se -f ../raw_data/LC2A_SRR1964645.fastq -t sanger -o trimmed_LC2A_SRR1964645.fastq -q 30 -l 50
+```  
+
+The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control** folder.  
+
+Following the sickle run, the resulting file structure will look as follows:  
+```bash
+quality_control/
+├── fastq_trimming.sh
+├── trimmed_LB2A_SRR1964642.fastq
+├── trimmed_LB2A_SRR1964643.fastq
+├── trimmed_LC2A_SRR1964644.fastq
+└── trimmed_LC2A_SRR1964645.fastq
+```  
+
+Examine the .out file generated during the run. It will provide a summary of the quality control process.  
+```
+SE input file: ../raw_data/LB2A_SRR1964642.fastq
+
+Total FastQ records: 26424138
+FastQ records kept: 23681970
+FastQ records discarded: 2742168
+
+
+SE input file: ../raw_data/LB2A_SRR1964643.fastq
+
+Total FastQ records: 26424138
+FastQ records kept: 23064271
+FastQ records discarded: 3359867
+
+
+SE input file: ../raw_data/LC2A_SRR1964644.fastq
+
+Total FastQ records: 25746094
+FastQ records kept: 23273009
+FastQ records discarded: 2473085
+
+
+SE input file: ../raw_data/LC2A_SRR1964645.fastq
+
+Total FastQ records: 25746094
+FastQ records kept: 23586197
+FastQ records discarded: 2159897
+```  
+
+## 3. FASTQC Before and After Quality Control
+It is helpful to see how the quality of the data has changed after using sickle. To do this, we will be using the commandline versions of fastqc and MultiQC. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
+
 
