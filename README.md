@@ -505,5 +505,238 @@ M = log2(D1/D2) = log2(D1)-log2(D2)
 A = ½log2(D1D2) = ½(log2(D1)+log2(D2))
 ``` 
 
+with D1 and D2 being datasets 1 and 2, respectively. We plot M on the vertical axis and A on the horizontal axis. We see here that should two datapoints from datasets 1 and 2 be equal, they will plot at (D1==D2, 0). Therefore, should our entire plot run along y=0, it is safe to say, that for us, none of our genes were differentially expressed. However, should there be large deviations from y=0, we are provided with insight that we may have differentially expressed genes.  
+
+
+### Heatmap  
+Heatmaps are the most readily readable visualizations for determining differential expression. Heatmaps are discrete plots. That is, the values along the x and y axis move in integer increments, with no places in-between. Typically, the x-and-y axes contain different types of information about each dataset, and combine to capture the whole image of the dataset. For us, we may find it useful to make one axis our groups (our four datasets) and the other axis the genes sampled from those datasets. Now each cell in our grid will correspond to the expression of a gene from a sample. We then assign a color-palette to each possible range of gene expression. For instance, an expression between 300-500 may be blue while an expression of 501-1000 may be violet. After coloring all of our cells responsibly, we now have simple, discrete snapshots of each datasets expression distribution. Should we notice that two groups have very similar looking snapshots, we may cluster those groups safely with the assumption that they do not share differentially expressed genes, and therefore belong to the same space.  
+
+### Principal Component Analysis(PCA)  
+Principal component analysis (PCA) is a technique used to emphasize variation and bring out strong patterns in a dataset. It's often used to make data easy to explore and visualize. It is a mathematical procedure that transforms a number of corrlated variables into a smaller number of uncorrelated variables called principle components. The first principal component accounts for as much of the variability in the data as possible, and each succeding component accounts for as much of the remaining variability as possible.  
+
+
+### Using DESeq2  
+The DESeq2 vignette comes with complete instructions on how to use DESeq2 for analysis. If you are ever confused, visit the vignette, find the appropriate step and read up. This is true for most Bioconductor packages. Now, let's begin loading our data:  
+
+```R
+# Download the DESeq2 try http:// if https:// URLs are not supported
+source("https://bioconductor.org/biocLite.R")
+biocLite("DESeq2")
+```
+
+
+```R
+# Load DESeq2 library
+library("DESeq2")
+# Set the working directory
+directory <- "~/your_directory_with_htseq_counts"
+setwd(directory)
+list.files(directory)
+``` 
+We will be generating a variety of files. We want the names of the files to inform us of exactly what information is contained in each file. The data is from the Croaker dataset, and we are analyzing the data with DESeq2. We choose an "outputPrefix" which, as the name suggests, will prefix all of our files.   
+
+```R 
+# Set the prefix for each output file name
+outputPrefix <- "Croaker_DESeq2"
+
+sampleFiles<- c("sort_trim_LB2A_SRR1964642.counts","sort_trim_LB2A_SRR1964643.counts",
+                "sort_trim_LC2A_SRR1964644.counts", "sort_trim_LC2A_SRR1964645.counts")
+# Liver mRNA profiles of control group: (LB2A) 
+# Liver mRNA profiles of thermal stress group: (LC2A)
+# ""CONTROL"" LB2A_1: sort_trim_LB2A_SRR1964642.counts, LB2A_2: sort_trim_LB2A_SRR1964643.counts
+# ""TREATED"" LC2A_1: sort_trim_LB2A_SRR1964644.counts, LC2A_2: sort_trim_LC2A_SRR1964645.counts
+```
+
+The vignette informs us that DESeq2 performs three main steps in its differential expression analysis: estimating size factors, estimating dispersion, and conducting the Wald Test. These steps are completed so as to fit a negative binomial distribution. Let's review these terms, first:
+
+Estimating size factors: This step operates under the simple assumption that if a sample is up-regulated then its transcriptome is larger than those which are not up-regulated. Suppose we have two samples, A and B. Every gene in A has been up-regulated by a factor of 2 and B is unchanged. If we took the proportion of gene expression in both samples they would return the same value! While A is twice as expressed, its transcriptome is twice as large. Our analysis would then conclude that no genes were differentially expressed, even though they all were. Estimating size factors is a more succinct way of stating that DESeq2 finds an idealized transcriptome size for all of the samples. Now all of the individual gene count proportions are calculating using the idealized transcriptome size and not the individual sample size. Because the gene counts themselves are not changed, our analysis will now return that each gene is differentially expressed with a fold change of two.
+
+Estimating Dispersion: Dispersion is another term for variance, or the distance we expect a random gene count to be away from the average gene count. While the negative binomial distribution is modeled with the parameters of probability of success, number of successes, and number of failures, we cannot create our distribution with these values. . . because we do not know them! Furthermore, we cannot calculate the number of failures because if a read failed to map then it isn't present in the counts file. We can get around this hurdle by reparameterizing the negative binomial distribution in terms of the mean and variance. Our size factor from before is technically our mean, which leaves us with having to determine the variance. Through a series of mathematical and statistical manipulations, DESeq2 calculates the idealized variance of our samples.  
+
+Wald Test: The Wald Test is a statistical test which can be used to assess the confidence in the results. After we finish creating our experimental distributions, the value of each gene in our experimental distribution is compared to its hypothetical value in the model distribution. By taking the ratio we get the percent similarity. Lastly, subtracting our percent similarity from 1 will give us our percent dissimilarity. This is the value DESeq2 returns as our p-value. You can think of this value as the percentage of chance that we're wrong about the fold change of a differentially expressed gene. Typically, we take all genes with p-values below 0.05. This is not the true Wald Test, but is the purpose behind the true statistic.
+
+Furthermore, DESeq2 informs us that clicking on any individual step will present us with instructions. Our first step is estimating our size factors.  
+
+We see that the only argument we need is a DESeq dataset. Let's create ours. From looking at the homepage of the DESeq2 vignete, we see that the "object" argument comes with links for a variety of data sources. Our data is from htseq-count, so we click on "DESeqDataSetFromHTSeqCount" in object row of the arguments.  
+
+We follow these instructions exactly to create our DESeq object:  
+
+
+```R 
+sampleNames <- c("LB2A_1","LB2A_2","LC2A_1","LC2A_2")
+sampleCondition <- c("control","control","treated","treated")
+
+sampleTable <- data.frame(sampleName = sampleNames,
+                          fileName = sampleFiles,
+                          condition = sampleCondition)
+
+ddsHTSeq <- DESeqDataSetFromHTSeqCount(sampleTable = sampleTable,
+                                       directory = directory,
+                                       design = ~ condition)
+```
+
+After creating our DESeq object, we go back to the DESeq function vignette. Very pleasantly, we see that it is as easy as typing "DESeq(object)". Afterwards, the vignette informs us that "results(dds)" will calculate the complete results, including p-values, fold changes, and more.  
+
+```R
+#By default, R will choose a reference level for factors based on alphabetical order. 
+# To chose the reference we can use: factor()
+treatments <- c("control","treated")
+ddsHTSeq$condition
+#Setting the factor levels
+colData(ddsHTSeq)$condition <- factor(colData(ddsHTSeq)$condition,
+                                      levels = treatments)
+ddsHTSeq$condition
+
+# Differential expression analysis
+#differential expression analysis steps are wrapped into a single function, DESeq()
+dds <- DESeq(ddsHTSeq)
+# restuls talbe will be generated using results() which will include:
+#  log2 fold changes, p values and adjusted p values
+res <- results(dds)
+res
+summary(res)
+# filter results by p value
+res= subset(res, padj<0.05)
+
+# order results by padj value (most significant to least)
+res <- res[order(res$padj),]
+# should see DataFrame of baseMean, log2Foldchange, stat, pval, padj
+
+# save data results and normalized reads to csv
+resdata <- merge(as.data.frame(res), 
+                 as.data.frame(counts(dds,normalized =TRUE)), 
+                 by = 'row.names', sort = FALSE)
+names(resdata)[1] <- 'gene'
+
+write.csv(resdata, file = paste0(outputPrefix, "-results-with-normalized.csv"))
+
+# send normalized counts to tab delimited file for GSEA, etc.
+write.table(as.data.frame(counts(dds),normalized=T), 
+            file = paste0(outputPrefix, "_normalized_counts.txt"), sep = '\t')
+
+# produce DataFrame of results of statistical tests
+mcols(res, use.names = T)
+write.csv(as.data.frame(mcols(res, use.name = T)),
+          file = paste0(outputPrefix, "-test-conditions.csv"))
+
+# replacing outlier value with estimated value as predicted by distrubution using
+# "trimmed mean" approach. recommended if you have several replicates per treatment
+# DESeq2 will automatically do this if you have 7 or more replicates
+
+ddsClean <- replaceOutliersWithTrimmedMean(dds)
+ddsClean <- DESeq(ddsClean)
+temp_ddsClean <- ddsClean
+tab <- table(initial = results(dds)$padj < 0.05,
+             cleaned = results(ddsClean)$padj < 0.05)
+addmargins(tab)
+write.csv(as.data.frame(tab),file = paste0(outputPrefix, "-replaceoutliers.csv"))
+resClean <- results(ddsClean)
+resClean = subset(res, padj<0.05)
+resClean <- resClean[order(resClean$padj),]
+write.csv(as.data.frame(resClean),file = paste0(outputPrefix, "-replaceoutliers-results.csv"))
+```
+
+Let's now create our visuals:  
+```R 
+####################################################################################
+# Exploratory data analysis of RNAseq data with DESeq2
+#
+# these next R scripts are for a variety of visualization, QC and other plots to
+# get a sense of what the RNAseq data looks like based on DESEq2 analysis
+#
+# 1) MA plot
+# 2) rlog stabilization and variance stabiliazation
+# 3) PCA plot
+# 4) heatmap of clustering analysis
+#
+#
+####################################################################################
+
+# MA plot of RNAseq data for entire dataset
+# http://en.wikipedia.org/wiki/MA_plot
+# genes with padj < 0.1 are colored Red
+plotMA(dds, ylim=c(-8,8),main = "RNAseq experiment")
+dev.copy(png, paste0(outputPrefix, "-MAplot_initial_analysis.png"))
+dev.off() 
+
+# transform raw counts into normalized values
+# DESeq2 has two options:  1) rlog transformed and 2) variance stabilization
+# variance stabilization is very good for heatmaps, etc.
+rld <- rlogTransformation(dds, blind=T)
+vsd <- varianceStabilizingTransformation(dds, blind=T)
+
+# save normalized values
+write.table(as.data.frame(assay(rld),file = paste0(outputPrefix, "-rlog-transformed-counts.txt"), sep = '\t'))
+write.table(as.data.frame(assay(vsd),file = paste0(outputPrefix, "-vst-transformed-counts.txt"), sep = '\t'))
+
+
+# clustering analysis
+# excerpts from http://dwheelerau.com/2014/02/17/how-to-use-deseq2-to-analyse-rnaseq-data/
+library("RColorBrewer")
+library("gplots")
+sampleDists <- dist(t(assay(rld)))
+suppressMessages(library("RColorBrewer"))
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- paste(colnames(rld), rld$type, sep="")
+colnames(sampleDistMatrix) <- paste(colnames(rld), rld$type, sep="")
+colors <- colorRampPalette( rev(brewer.pal(8, "Blues")) )(255)
+heatmap(sampleDistMatrix,col=colors,margin = c(8,8))
+dev.copy(png,paste0(outputPrefix, "-clustering.png"))
+dev.off()
+
+#Principal components plot shows additional but rough clustering of samples
+library("genefilter")
+library("ggplot2")
+library("grDevices")
+
+rv <- rowVars(assay(rld))
+select <- order(rv, decreasing=T)[seq_len(min(500,length(rv)))]
+pc <- prcomp(t(assay(vsd)[select,]))
+
+# set condition
+condition <- treatments
+scores <- data.frame(pc$x, condition)
+
+(pcaplot <- ggplot(scores, aes(x = PC1, y = PC2, col = (factor(condition))))
+  + geom_point(size = 5)
+  + ggtitle("Principal Components")
+  + scale_colour_brewer(name = " ", palette = "Set1")
+  + theme(
+    plot.title = element_text(face = 'bold'),
+    legend.position = c(.9,.2),
+    legend.key = element_rect(fill = 'NA'),
+    legend.text = element_text(size = 10, face = "bold"),
+    axis.text.y = element_text(colour = "Black"),
+    axis.text.x = element_text(colour = "Black"),
+    axis.title.x = element_text(face = "bold"),
+    axis.title.y = element_text(face = 'bold'),
+    panel.grid.major.x = element_blank(),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    panel.background = element_rect(color = 'black',fill = NA)
+  ))
+#dev.copy(png,paste0(outputPrefix, "-PCA.png"))
+ggsave(pcaplot,file=paste0(outputPrefix, "-ggplot2.png"))
+
+
+# heatmap of data
+library("RColorBrewer")
+library("gplots")
+# 1000 top expressed genes with heatmap.2
+select <- order(rowMeans(counts(ddsClean,normalized=T)),decreasing=T)[1:100]
+my_palette <- colorRampPalette(c("blue",'white','red'))(n=100)
+heatmap.2(assay(vsd)[select,], col=my_palette,
+          scale="row", key=T, keysize=1, symkey=T,
+          density.info="none", trace="none",
+          cexCol=0.6, labRow=F,
+          main="Heatmap of 100 DE Genes in Liver Tissue Comparison")
+dev.copy(png, paste0(outputPrefix, "-HEATMAP.png"))
+dev.off()
+```
+
+## 8. EnTAP – Functional Annotation for DE Genes  
+
+Once the differentially expressed genes have been identified, we need to annotate the genes to identify the function. We will take the top 9 genes from the csv file to do a quick annotation. Will be useing the head command on the file, which will take the first 10 lines, and pipe it into a new file called temp.csv
 
 
