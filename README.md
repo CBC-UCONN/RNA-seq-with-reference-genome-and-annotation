@@ -735,6 +735,16 @@ dev.copy(png, paste0(outputPrefix, "-HEATMAP.png"))
 dev.off()
 ```
 
+![](images/Croaker_DESeq2-MAplot_initial_analysis.png)
+
+![](images/Croaker_DESeq2-clustering.png)
+
+![](images/Croaker_DESeq2-ggplot2.png)
+
+![](images/Croaker_DESeq2-HEATMAP.png)
+
+
+
 ## 8. EnTAP – Functional Annotation for DE Genes  
 
 Once the differentially expressed genes have been identified, we need to annotate the genes to identify the function. We will take the top 9 genes from the csv file to do a quick annotation. Will be useing the head command on the file, which will take the first 10 lines, and pipe it into a new file called temp.csv
