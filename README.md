@@ -791,7 +791,7 @@ module load diamond/0.9.19
 module load eggnog-mapper/0.99.1
 module load interproscan/5.25-64.0
 
-/UCHC/LABS/Wegrzyn/EnTAP/EnTAP --runP -i fasta_out.fasta -d /isg/shared/databases/Diamond/RefSeq/vertebrate_other.protein.faa.88.dmnd -d /isg/shared/databases/Diamond/Uniprot/uniprot_sprot.dmnd --ontology 0  --threads 16
+/labs/Wegrzyn/EnTAP/EnTAP --runP -i fasta_out.fasta -d /isg/shared/databases/Diamond/RefSeq/vertebrate_other.protein.faa.88.dmnd -d /isg/shared/databases/Diamond/Uniprot/uniprot_sprot.dmnd --ontology 0  --threads 16
 ```  
 
 Usage of the entap program:
