@@ -418,7 +418,12 @@ mapping/
 
 ## 6. Generating Total Read Counts from Alignment using htseq-count  
 
-Now we will be using the htseq-count program to count the reads which is mapping to the genome.  
+Now we will be using the htseq-count program to count the reads which is mapping to the genome. To map the features you will be needing the gff file to be downloade into your direcotry. It can be done using the following command:  
+```bash
+wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.1_L_crocea_1.0/GCF_000972845.1_L_crocea_1.0_genomic.gff.gz
+```   
+Once downloaded and unziped, then you can count the features using the `htseq-count` program.  
+
 ```bash
 htseq-count -s no -r pos -t gene -i Dbxref -f bam ../mapping/sort_trim_LB2A_SRR1964642.bam GCF_000972845.1_L_crocea_1.0_genomic.gff > LB2A_SRR1964642.counts
 ```
