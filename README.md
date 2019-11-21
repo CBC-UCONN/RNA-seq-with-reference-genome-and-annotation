@@ -12,8 +12,8 @@ Contents
 5. [Aligning Reads to a Genome using hisat2](#5-aligning-reads-to-a-genome-using-hisat2)
 6. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
 7. [Pairwise differential expression with counts in R with DESeq2](#7-pirewise-differential-expression-with-counts-in-r-using-deseq2)
-	1. Common plots for differential expression analysis
-	2. Using DESeq2
+	1. [Common plots for differential expression analysis](#common-plots-for-differential-expression-analysis)
+	2. [Using DESeq2](#using-deseq2)
 7. [EnTAP: Functional Annotation for Genomes](#8-entap--functional-annotation-for-de-genes)
 8. [Integrating the DE Results with the Annotation Results](#9-integrating-the-de-results-with-the-annotation-results)  
 
