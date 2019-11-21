@@ -13,12 +13,9 @@
 
 echo `hostname`
 
-module load anaconda/2.4.0
-module load perl/5.24.0
+module load EnTAP/0.9.0-beta
 module load diamond/0.9.19
-module load eggnog-mapper/0.99.1
-module load interproscan/5.25-64.0
 
-/labs/Wegrzyn/EnTAP/EnTAP --runP -i fasta_out.fasta -d /isg/shared/databases/Diamond/RefSeq/vertebrate_other.protein.faa.88.dmnd -d /isg/shared/databases/Diamond/Uniprot/uniprot_sprot.dmnd --ontology 0  --threads 16 
+EnTAP --runP -i fasta_out.fasta -d /isg/shared/databases/Diamond/RefSeq/vertebrate_other.protein.faa.97.dmnd -d /isg/shared/databases/Diamond/Uniprot/uniprot_sprot.dmnd --ontology 0  --threads 16 
 
 
