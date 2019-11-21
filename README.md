@@ -5,16 +5,17 @@ This repository is a usable, publicly available tutorial for analyzing different
 
 
 Contents
-1. Overview
-2. Accessing the Data using SRA-Toolkit  
-3. Quality control using sickle
-4. Aligning Reads to a Genome using hisat2
-5. Generating Total Read Counts from Alignment using htseq-count
-6. Pairwise differential expression with counts in R with DESeq2
+1. [Overview](#1-overview)
+2. [Accessing the Data using SRA-Toolkit](#2-accessing-the-data-using-sra-toolkit)  
+3. [Quality control using sickle](#3-quality-control-using-sickle)
+4. [FASTQC Before and After Quality Control](#4-fastqc-before-and-after-quality-control)
+5. [Aligning Reads to a Genome using hisat2](#5-aligning-reads-to-a-genome-using-hisat2)
+6. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
+7. [Pairwise differential expression with counts in R with DESeq2](#7-pirewise-differential-expression-with-counts-in-r-using-deseq2)
 	1. Common plots for differential expression analysis
 	2. Using DESeq2
-7. EnTAP: Functional Annotation for Genomes
-8. Integrating the DE Results with the Annotation Results  
+7. [EnTAP: Functional Annotation for Genomes](#8-entap--functional-annotation-for-de-genes)
+8. [Integrating the DE Results with the Annotation Results](#9-integrating-the-de-results-with-the-annotation-results)  
 
 
 ## 1. Overview  
@@ -194,7 +195,7 @@ FastQ records kept: 23586197
 FastQ records discarded: 2159897
 ```  
 
-## 3. FASTQC Before and After Quality Control
+## 4. FASTQC Before and After Quality Control
 It is helpful to see how the quality of the data has changed after using sickle. To do this, we will be using the commandline versions of fastqc and MultiQC. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
 
 ```bash
