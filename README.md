@@ -788,16 +788,15 @@ entap/
 `-- fasta_out.fasta
 ```  
 
+Now you are all set to run EnTAP program, but before that you need to make sure entap_config.txt file is created in your working directory. For this exercise we have created the `entap_config.txt` file for you inthe **entap/** directory.  
+
 Once we have the fasta file with the protein sequences we can run the enTAP program to grab the functional annotations using the following command:
 
 ```bash
-module load anaconda/2.4.0
-module load perl/5.24.0
+module load EnTAP/0.9.0-beta
 module load diamond/0.9.19
-module load eggnog-mapper/0.99.1
-module load interproscan/5.25-64.0
 
-/labs/Wegrzyn/EnTAP/EnTAP --runP -i fasta_out.fasta -d /isg/shared/databases/Diamond/RefSeq/vertebrate_other.protein.faa.88.dmnd -d /isg/shared/databases/Diamond/Uniprot/uniprot_sprot.dmnd --ontology 0  --threads 16
+EnTAP --runP -i fasta_out.fasta -d /isg/shared/databases/Diamond/RefSeq/vertebrate_other.protein.faa.97.dmnd -d /isg/shared/databases/Diamond/Uniprot/uniprot_sprot.dmnd --ontology 0  --threads 16 
 ```  
 
 Usage of the entap program:
