@@ -1,0 +1,9 @@
+diamond_exe_path=diamond
+rsem_exe_path=/isg/shared/apps/EnTAP/0.9.0-beta/libs/RSEM-1.3.0
+genemarkst_exe_path=perl /isg/shared/apps/EnTAP/0.9.0-beta/libs/gmst_linux_64/gmst.pl
+eggnog_sql_database=/isg/shared/apps/EnTAP/0.9.0-beta/databases/databases/eggnog.db
+eggnog_dmnd_database=/isg/shared/apps/EnTAP/0.9.0-beta/databases/bin/eggnog_proteins.dmnd
+interpro_exe_path=interproscan.sh
+entap_database_sql_path=
+entap_database_bin_path=/isg/shared/apps/EnTAP/0.9.0-beta/databases/bin/entap_database.bin
+entap_graphing_script=
