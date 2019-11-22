@@ -330,7 +330,7 @@ The full slurm scripts are called [multiqc_raw.sh](/fastqc/multiqc_raw.sh) and [
 
 ## 5. Aligning Reads to a Genome using hisat2  
 
-Building an Index:  
+#### Building the Index:  
 HISAT2 is a fast and sensitive aligner for mapping next generation sequencing reads against a reference genome.
 In order to map the reads to a reference genome, first we must download the reference genome! Then we must make an index file. We will be downloading the reference genome (https://www.ncbi.nlm.nih.gov/genome/12197) from the ncbi database, using the wget command.  
 
@@ -393,19 +393,21 @@ module load hisat2/2.0.5
 hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LB2A_SRR1964642.fastq -S trimmed_LB2A_SRR1964642.sam
 ```  
 
-The full script for slurm scheduler can be found in the **align** folder by the name [align.sh](/align/align.sh)  
+The full script for slurm scheduler can be found in the **align/** folder by the name [align.sh](/align/align.sh)  
 
 Once the mapping have been completed, the file structure is as follows:  
 ```bash
-mapping/
-|-- mapping.sh
+align/
+|-- align.sh
 |-- trim_LB2A_SRR1964642.sam
 |-- trim_LB2A_SRR1964643.sam
 |-- trim_LC2A_SRR1964644.sam
 `-- trim_LC2A_SRR1964645.sam
 ```  
 
-When HISAT2 completes its run, it will summarize each of it’s alignments, and it is written to the standard error file, which can be find in the same folder once the run is completed.  
+When HISAT2 completes its run, it will summarize each of it’s alignments, and it is written to the standard error file, which can be find in the same folder once the run is completed.   
+
+Alignment results for a single sample is shown below: 
 ```
 21799606 reads; of these:
   21799606 (100.00%) were unpaired; of these:
@@ -465,7 +467,7 @@ Alternatively the sort function converts SAM files to BAM automatically. Therefo
 samtools sort -@ 4 -o sort_trim_LB2A_SRR1964642.bam trimmed_LB2A_SRR1964642.sam
 ``` 
 
-The full script for slurm scheduler can be found in the **align** folder by the name [sam2bam.sh](/align/sam2bam.sh)  
+The full script for slurm scheduler can be found in the **align/** folder by the name [sam2bam.sh](/align/sam2bam.sh)  
 
 Once the conversion is done you will have the following files in the directory.  
 ```bash  
@@ -517,7 +519,7 @@ Options:
                         suitable for Ensembl GTF files: gene_id)
 ``` 
 
-The above command should be repeated for all other BAM files as well. The full script for slurm scheduler can be found in the **count** folder which is called [htseq_count.sh](/count/htseq_count.sh).  
+The above command should be repeated for all other BAM files as well. The full script for slurm scheduler can be found in the **count/** folder which is called [htseq_count.sh](/count/htseq_count.sh).  
 
 Once all the bam files have been counted, we will be having the following files in the count directory.  
 ```bash
@@ -583,13 +585,7 @@ Principal component analysis (PCA) is a technique used to emphasize variation an
 
 
 ### Using DESeq2  
-The DESeq2 vignette comes with complete instructions on how to use DESeq2 for analysis. If you are ever confused, visit the vignette, find the appropriate step and read up. This is true for most Bioconductor packages. Now, let's begin loading our data:  
-
-```R
-# Download the DESeq2 try http:// if https:// URLs are not supported
-source("https://bioconductor.org/biocLite.R")
-biocLite("DESeq2")
-```
+The DESeq2 vignette comes with complete instructions on how to use DESeq2 for analysis. If you are ever confused, visit the vignette, find the appropriate step and read up. This is true for most Bioconductor packages. Before going forward make sure you have downloaded the **DESeq2** package from the **bioconductor** webside. Depending on the version of R in your computer method of download the install might vari, so please refer to the [**bioconductor website**](https://www.bioconductor.org/) . Now, let's begin loading our data:  
 
 
 ```R
@@ -606,12 +602,12 @@ We will be generating a variety of files. We want the names of the files to info
 # Set the prefix for each output file name
 outputPrefix <- "Croaker_DESeq2"
 
-sampleFiles<- c("sort_trim_LB2A_SRR1964642.counts","sort_trim_LB2A_SRR1964643.counts",
-                "sort_trim_LC2A_SRR1964644.counts", "sort_trim_LC2A_SRR1964645.counts")
+sampleFiles<- c("LB2A_SRR1964642.counts","LB2A_SRR1964643.counts",
+                "LC2A_SRR1964644.counts", "LC2A_SRR1964645.counts")
 # Liver mRNA profiles of control group: (LB2A) 
 # Liver mRNA profiles of thermal stress group: (LC2A)
-# ""CONTROL"" LB2A_1: sort_trim_LB2A_SRR1964642.counts, LB2A_2: sort_trim_LB2A_SRR1964643.counts
-# ""TREATED"" LC2A_1: sort_trim_LB2A_SRR1964644.counts, LC2A_2: sort_trim_LC2A_SRR1964645.counts
+# ""CONTROL"" LB2A_1: LB2A_SRR1964642.counts, LB2A_2: LB2A_SRR1964643.counts
+# ""TREATED"" LC2A_1: LB2A_SRR1964644.counts, LC2A_2: LC2A_SRR1964645.counts
 ```
 
 The vignette informs us that DESeq2 performs three main steps in its differential expression analysis: estimating size factors, estimating dispersion, and conducting the Wald Test. These steps are completed so as to fit a negative binomial distribution. Let's review these terms, first:
