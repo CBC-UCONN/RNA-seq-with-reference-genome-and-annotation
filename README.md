@@ -24,10 +24,45 @@ Liver mRNA profiles large yellow croaker (Larimichthys crocea) species are sampl
 
 We will only use the control group (LB2A) and the thermal stress group (LC2A) 
 
+
+#### Cloning the workflow
 The workflow may be cloned into the appropriate directory using the terminal command:  
 ```bash
-git clone https://github.com/golden75/Model_Marine_RNA_Seq_and_functionalAnnotation.git 
+git clone < git-repository-path.git > 
 ```  
+
+Once you clone the repository you can see the following folder structure: 
+```
+Marine/
+├── raw_data
+├── quality_control
+├── fastqc
+├── index
+├── align
+├── count
+└── entap
+```
+
+#### SLURM scripts
+The tutorial will be using SLURM schedular to submit jobs to Xanadu cluster. In each script we will be using it will contain a header section which will allocate the resources for the SLURM schedular. The header section will contain:
+
+```
+#!/bin/bash
+#SBATCH --job-name=JOBNAME
+#SBATCH -n 1
+#SBATCH -N 1
+#SBATCH -c 1
+#SBATCH --mem=1G
+#SBATCH --partition=general
+#SBATCH --qos=general
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=first.last@uconn.edu
+#SBATCH -o %x_%j.out
+#SBATCH -e %x_%j.err
+```
+
+Before beginning, we need to understand a few aspects of the Xanadu server. When first logging into Xanadu from your local terminal, you will be connected to the submit node. The submit node is the interface with which users on Xanadu may submit their processes to the desired compute nodes, which will run the process. Never, under any circumstance, run processes directly in the submit node. Your process will be killed and all of your work lost! This tutorial will not teach you shell script configuration to submit your tasks on Xanadu. Therefore, before moving on, read and master the topics covered in the [Xanadu tutorial](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/).
+
 
 ## 2. Accessing the Data using SRA-Toolkit    
 
@@ -46,8 +81,8 @@ We can download the SRA data using SRA-Toolkit using the following command:
 #SBATCH -N 1
 #SBATCH -c 1
 #SBATCH --mem=15G
-#SBATCH --partition=mcbstudent
-#SBATCH --qos=mcbstudent
+#SBATCH --partition=general
+#SBATCH --qos=general
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=first.last@uconn.edu
 #SBATCH -o %x_%j.out
@@ -153,7 +188,7 @@ sickle se -f ../raw_data/LC2A_SRR1964644.fastq -t sanger -o trimmed_LC2A_SRR1964
 sickle se -f ../raw_data/LC2A_SRR1964645.fastq -t sanger -o trimmed_LC2A_SRR1964645.fastq -q 30 -l 50
 ```  
 
-The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control** folder.  
+The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder.  
 
 Following the sickle run, the resulting file structure will look as follows:  
 ```bash
@@ -223,7 +258,7 @@ fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964645.fastq -t 8
 
 The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in fastqc folder.  
  
-This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc** will look like:  
+This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc/** will look like:  
 ```
 fastqc/
 ├── after
@@ -246,7 +281,15 @@ fastqc/
 │   └── LC2A_SRR1964645_fastqc.zip
 ```  
 
-fastqc will create the files "trimmed_file_fastqc.html". To have a look at one, we need to move all of our "trimmed_file_fastqc.html" files into a single directory, and then secure copy that folder to our local directory. Then, we may open our files! If that seems like too much work for you, you may open the files directly through this github. Simply click on any "html" file and you may view it in your browser immediately. Because of this, the steps mentioned above will not be placed in this tutorial.  
+fastqc will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you may have to download them to your laptop using a **transfer.cam.uchc.edu** submit node as shown below: 
+
+```bash
+scp user-name@transfer.cam.uchc.edu:/UCHC/PublicShare/RNASeq_Workshop/Marine/fastqc/before/*.html .
+```
+
+Do not forget the '**.**' at the end of the above code; which means to download them to the current working directory in your computer. Likewise you can download the **HTML** files before timming and after trimming. 
+
+ 
 
 Let's have a look at the file format from fastqc and multiqc. When loading the fastqc file, you will be greeted with this screen  
 ![](/images/fastqc1.png)  
@@ -265,6 +308,24 @@ The last index at which we are going to look is the "Overrepresented Sequences" 
 ![](images/fastqc4.png)  
 
 This is simply a list of sequences which appear disproportionately in our reads file. The reads file actually includes the primer sequences for this exact reason. When fastqc calculates a sequence which appears many times beyond the expected distribution, it may check the primer sequences in the reads file to determine if the sequence is a primer. If the sequence is not a primer, the result will be returned as "No Hit". Sequences which are returned as "No Hit" are most likely highly expressed genes.  
+
+When you have multiple HTML files to view it will be become much more tedious to open each file at a time, and look at them. So to get all the HTML into a one file you can use a program called [MultiQC](https://multiqc.info/), which will combine these files. The code to do that is shown below:
+
+For HTML files in the **before/** folder:
+```bash
+module load MultiQC/1.1
+
+multiqc --outdir raw_multiqc ./before/
+``` 
+
+For HTML file in the **after/** folder:
+```bash
+module load MultiQC/1.1
+
+multiqc --outdir trimmed_multiqc ./after/
+```  
+
+The full slurm scripts are called [multiqc_raw.sh](/fastqc/multiqc_raw.sh) and [multiqc_trimmed.sh](/fastqc/multiqc_trimmed.sh) which can be found in the **fastqc/** folder.  As discribed above you may have to transfer these file to your computer to view them.
 
 
 ## 5. Aligning Reads to a Genome using hisat2  
