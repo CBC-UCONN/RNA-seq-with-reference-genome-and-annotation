@@ -5,6 +5,8 @@
 #SBATCH -c 1
 #SBATCH --mem=1G
 #SBATCH --mail-type=ALL
+#SBATCH --partition=general
+#SBATCH --qos=general
 #SBATCH -o %x_%j.out
 #SBATCH -e %x_%j.err
 
