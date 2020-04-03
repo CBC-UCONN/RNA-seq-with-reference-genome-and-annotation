@@ -653,7 +653,7 @@ ddsHTSeq$condition
 # Differential expression analysis
 #differential expression analysis steps are wrapped into a single function, DESeq()
 dds <- DESeq(ddsHTSeq)
-# restuls talbe will be generated using results() which will include:
+# results table will be generated using results() which will include:
 #  log2 fold changes, p values and adjusted p values
 res <- results(dds)
 res
