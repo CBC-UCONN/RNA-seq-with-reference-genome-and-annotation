@@ -11,7 +11,7 @@ Contents
 4. [FASTQC Before and After Quality Control](#4-fastqc-before-and-after-quality-control)
 5. [Aligning Reads to a Genome using hisat2](#5-aligning-reads-to-a-genome-using-hisat2)
 6. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
-7. [Pairwise differential expression with counts in R with DESeq2](#7-pirewise-differential-expression-with-counts-in-r-using-deseq2)
+7. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
 	1. [Common plots for differential expression analysis](#common-plots-for-differential-expression-analysis)
 	2. [Using DESeq2](#using-deseq2)
 7. [EnTAP: Functional Annotation for Genomes](#8-entap--functional-annotation-for-de-genes)
@@ -553,7 +553,7 @@ GeneID:104917635	254
 We see the layout is quite straightforward, with two columns separated by a tab. The first column identifies the gene from the eponymous sample and the second column is the number of mRNA strands from the row's gene found in the sample. This setup is perfect for our next task, identifying differentially expressed genes.  
 
 
-## 7. Pirewise Differential Expression with Counts in R using DESeq2  
+## 7. Pairwise Differential Expression with Counts in R using DESeq2  
 
 This part of the tutorial must be run locally. To download the appropriate files to your local computer, we will use the secure copy client, "scp". Close your Xanadu connection and run the following code:  
 
