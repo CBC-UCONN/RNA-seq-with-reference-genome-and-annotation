@@ -811,7 +811,12 @@ dev.off()
 
 ## 8. EnTAP – Functional Annotation for DE Genes  
 
-For this step we will go back to the cluster, and our working directory will be **entap/**. We will now transfer the csv file named `Croaker_DESeq2-results-with-normalized.csv` from the DESeq analysis to this folder. Once the transfer is complete the entap directory should have the above csv file.  
+For this step we will go back to the cluster, and our working directory will be **entap/**. We will now transfer the csv file named `Croaker_DESeq2-results-with-normalized.csv` from the DESeq analysis to this folder. Once the transfer is complete the entap directory should have the above csv file.   
+```
+entap
+├── Croaker_DESeq2-results-with-normalized.csv
+```
+
 
 Once the differentially expressed genes have been identified, we need to annotate the genes to identify the function. We will take the top 9 genes from the csv file to do a quick annotation. Will be useing the head command on the file, which will take the first 10 lines, and pipe it into a new file called temp.csv. 
 
