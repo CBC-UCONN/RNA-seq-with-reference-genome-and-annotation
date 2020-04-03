@@ -698,7 +698,7 @@ resClean = subset(res, padj<0.05)
 resClean <- resClean[order(resClean$padj),]
 write.csv(as.data.frame(resClean),file = paste0(outputPrefix, "-replaceoutliers-results.csv"))
 ```
-When you execute the above code, it will create the above mentioned csv files with information. From the above csv files created  `Croaker_DESeq2-results-with-normalized.csv` will contain the filtered results by p adjusted value of 0.05 and the corrosponding normalized counts.  
+When you execute the above code, it will create the above mentioned csv files with information. From the above csv files created  `Croaker_DESeq2-results-with-normalized.csv` will contain the filtered results by p adjusted value of 0.05 and the corrosponding normalized counts. This csv file will be used in the next step (EnTAP) to find the functional annotation of genes.   
 
 Let's now create our visuals:  
 ```R 
