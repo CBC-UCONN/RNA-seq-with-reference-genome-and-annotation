@@ -20,10 +20,9 @@ Contents
 
 ## 1. Overview  
 
-In this study, the response of large yellow croaker (_Larimichthys crocea_) to heat stress (LC2A), cold stress (LA2A) and a 21-day fast (LF1A) were of interest. mRNA was extracted from livers from from fishes from the three treatments and a control (LB2A) and sequenced on an Illumina HiSeq 2000. 
+In this study, transcriptional responses to three environmental stresses were examined in the large yellow croaker (_Larimichthys crocea_): heat stress (LC2A), cold stress (LA2A) and a 21-day fast (LF1A). mRNA was extracted from livers from from fishes from the three treatments and a control (LB2A) and sequenced on an Illumina HiSeq 2000. 
 
 For the purposes of this tutorial, we will compare the control (LB2A) to the heat stress treatment (LC2A). 
-
 
 #### Cloning the tutorial repository
 
@@ -66,20 +65,24 @@ Each script contains a header section which specifies computational resources (p
 #SBATCH -e %x_%j.err
 ```
 
-Before beginning, we need to understand a few aspects of the Xanadu server. When first logging into Xanadu from your local terminal, you will be connected to a **submit node**. The submit node is meant to serve as an **interface** for users, and under no circumstances should you use it to do serious computation. If you do, the system administrators may kill your job, causing you to lose your work, and then send you a mean e-mail about it. On the submit node you may manage and inspect files, write and edit scripts, and do other very light duty work. To analyze data, you need to request access to one or more **compute nodes** through SLURM. This tutorial will not teach you how to configure the SLURM header. Therefore, before moving on, it would be helpful to read and master the topics covered in the [Xanadu tutorial](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/) and our [guide to resource requests](https://github.com/CBC-UCONN/CBC_Docs/wiki/Requesting-resource-allocations-in-SLURM).
+Before beginning, you need to understand a few aspects of the Xanadu server. When first logging into Xanadu from your local terminal, you will be connected to a **submit node**. The submit node is meant to serve as an **interface** for users, and under no circumstances should you use it to do serious computation. If you do, the system administrators may kill your job, causing you to lose your work, and then send you a mean e-mail about it. On the submit node you may manage and inspect files, write and edit scripts, and do other very light duty work. To analyze data, you need to request access to one or more **compute nodes** through SLURM. This tutorial will not teach you how to configure the SLURM header. Therefore, before moving on, it would be helpful to read and master the topics covered in the [Xanadu tutorial](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/) and our [guide to resource requests](https://github.com/CBC-UCONN/CBC_Docs/wiki/Requesting-resource-allocations-in-SLURM).
 
 
 ## 2. Accessing the Data using SRA-Toolkit    
-
 
 Before we can get started, we need to get the data we're going to analyze. This dataset has been deposited in the [Sequence Read Archive (SRA)](https://www.ncbi.nlm.nih.gov/sra) at NCBI, a comprehensive collection of sequenced genetic data submitted by researchers. The beauty of the SRA is the ease with which genetic data becomes accessible to any scientist with an internet connection. Sets of sequences (usually all the sequences from a given sample within an experiment) in the SRA have a unique identifier. The set may be downloaded using a software module called the `sratoolkit`. There are a variety of commands in the `sratoolkit`, which I invite you to investigate for yourself at [here](https://www.ncbi.nlm.nih.gov/books/NBK158900/).  
 
 An overview of the project data can be viewed [here](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA280841/). 
 
+We will download data from the control samples (LB2A) and the heat stress treatment (LC2A). The SRA accessions are as follows:
+
 LB2A : SRR1964642, SRR1964643  
 LC2A : SRR1964644, SRR1964645  
 
-We can download the SRA data using SRA-Toolkit using the following command:  
+We have provided a script to download the data from the the SRA data using SRA-Toolkit using [this script](/raw_data/fastqc_dump_xanadu.sh). It contains three sections. 
+
+The SLURM header: 
+
 ```bash
 #!/bin/bash
 #SBATCH --job-name=fastq_dump_xanadu
@@ -93,7 +96,11 @@ We can download the SRA data using SRA-Toolkit using the following command:
 #SBATCH --mail-user=first.last@uconn.edu
 #SBATCH -o %x_%j.out
 #SBATCH -e %x_%j.err
+```
 
+The download commands:
+
+```
 echo `hostname`
 
 module load sratoolkit/2.8.1  
@@ -103,7 +110,8 @@ fastq-dump SRR1964644
 fastq-dump SRR1964645  
 ```
 
-Once the download is complete, we will rename the according to the samples for easy identification.  
+Once downloaded, we rename the samples:  
+
 ```bash
 mv SRR1964642.fastq LB2A_SRR1964642.fastq
 mv SRR1964643.fastq LB2A_SRR1964643.fastq
@@ -111,11 +119,10 @@ mv SRR1964644.fastq LC2A_SRR1964644.fastq
 mv SRR1964645.fastq LC2A_SRR1964645.fastq
 ```  
 
-The full script for slurm scheduler can be found in the raw_data folder by the name [fastq_dump_xanadu.sh](/raw_data/fastqc_dump_xanadu.sh).  
-
-It is advised that you familiarize yourself with the arguments for the Slurm scheduler. While it may seem as though running your commands locally will be more efficient due to the hassle of not initializing and writing scripts, do not fall for that trap! The capacity of the Slurm scheduler far exceeds the quickness of entering the commands locally. While the rest of this tutorial will not include the process of initializing and writing the Slurm arguments in a script in its coding, know that the Xanadu scripts in the cloned directory do contain the Slurm arguments. However, before running any cloned Xanadu script, you must edit and enter your appropriate email address!  
+The full script for slurm scheduler can be found in the `raw_data` folder. Before running it, add your own e-mail address to the `--mail-user` option (or delete the line entirely if you don't want an e-mail notification when the job completes). 
 
 Once the download and the renaming is done the folder structure will look like:  
+
 ```bash
 raw_data/
 |-- LB2A_SRR1964642.fastq
@@ -124,7 +131,8 @@ raw_data/
 `-- LC2A_SRR1964645.fastq
 ```   
 
-Lets have a look at athe contents of one of the fastq-files:  
+Lets have a look at at the contents of one of the fastq-files:  
+
 ```bash
 head -n 12 LB2A_SRR1964642.fastq
 
@@ -142,8 +150,7 @@ GGACAACGCCTGGACTCTGGTTGGTATTGTCTCCTGGGGAAGCAGCCGTTGCTCCACCTCCACTCCTGGTGTCTATGCCC
 CCCFFFFFHHFFHJJJIIIJHHJJHHJJIJIIIJEHJIJDIJJIIJJIGIIIIJGHHHHFFFFFEEEEECDDDDEDEDDDDDDDADDDDD
 ```  
 
-We see that for our first three runs we have information about the sampled read including its length followed by the nucleotide read and then a "+" sign. The "+" sign marks the beginning of the corresponding scores for each nucleotide read for the nucleotide sequence preceding the "+" sign.  
-
+Each sequence record has four lines. The first is the sequence name, beginning with `@`. The second is the nucleotide sequence. The third is a comment line, beginning with `+`, and which here only contains the sequence name again (it is often empty). The fourth are [phred-scaled base quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), encoded by [ASCII characters](https://drive5.com/usearch/manual/quality_score.html). Follow the links to learn more, but in short, the quality scores give the probability a called base is incorrect. 
 
 ## 3. Quality Control Using Sickle  
 
