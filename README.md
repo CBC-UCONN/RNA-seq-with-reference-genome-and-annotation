@@ -72,9 +72,10 @@ Before beginning, we need to understand a few aspects of the Xanadu server. When
 ## 2. Accessing the Data using SRA-Toolkit    
 
 
-We will be downloading our data from the sequence-read-archives (SRA), a comprehensive collection of sequenced genetic data submitted to the NCBI by experimenters. The beauty of the SRA is the ease with which genetic data becomes accessible to any scientist with an internet connection, available for download in a variety of formats. Each run in the SRA has a unique identifier. The run may be downloaded using a module of software called the "sratoolkit" and its unique identifier. There are a variety of commands in the sratoolkit, which I invite you to investigate for yourself at https://www.ncbi.nlm.nih.gov/books/NBK158900/.  
+Before we can get started, we need to get the data we're going to analyze. This dataset has been deposited in the [Sequence Read Archive (SRA)](https://www.ncbi.nlm.nih.gov/sra) at NCBI, a comprehensive collection of sequenced genetic data submitted by researchers. The beauty of the SRA is the ease with which genetic data becomes accessible to any scientist with an internet connection. Sets of sequences (usually all the sequences from a given sample within an experiment) in the SRA have a unique identifier. The set may be downloaded using a software module called the `sratoolkit`. There are a variety of commands in the `sratoolkit`, which I invite you to investigate for yourself at [here](https://www.ncbi.nlm.nih.gov/books/NBK158900/).  
 
-The data may be accessed at the following web page: https://www.ncbi.nlm.nih.gov/bioproject/28084  
+An overview of the project data can be viewed [here](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA280841/). 
+
 LB2A : SRR1964642, SRR1964643  
 LC2A : SRR1964644, SRR1964645  
 
