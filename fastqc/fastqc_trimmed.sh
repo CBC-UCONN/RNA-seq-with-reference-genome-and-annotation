@@ -22,8 +22,8 @@ if [ ! -d "$dir" ]; then
 fi
 
 module load fastqc/0.11.5
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964642.fastq -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964643.fastq -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964644.fastq -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964645.fastq -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964642.trim.fastq.gz -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964643.trim.fastq.gz -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964644.trim.fastq.gz -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964645.trim.fastq.gz -t 8
 

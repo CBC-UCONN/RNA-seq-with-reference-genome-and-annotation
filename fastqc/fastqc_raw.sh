@@ -22,8 +22,8 @@ if [ ! -d "$dir" ]; then
 fi
 
 module load fastqc/0.11.5
-fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964642.fastq
-fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964643.fastq
-fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq
-fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq
+fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964642.fastq.gz
+fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964643.fastq.gz
+fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq.gz
+fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq.gz
 

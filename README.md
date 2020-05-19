@@ -101,16 +101,15 @@ The SLURM header:
 The download commands:
 
 ```
-echo `hostname`
+module load sratoolkit/2.8.1 
 
-module load sratoolkit/2.8.1  
 fastq-dump --gzip SRR1964642
 fastq-dump --gzip SRR1964643
 fastq-dump --gzip SRR1964644
 fastq-dump --gzip SRR1964645
 ```
 
-Once downloaded, we rename the samples:  
+The line `module load sratoolkit/2.8.1` loads the `sratoolkit` so we can use it. Once downloaded, we rename the samples:  
 
 ```bash
 mv SRR1964642.fastq.gz LB2A_SRR1964642.fastq.gz
@@ -127,13 +126,15 @@ Once the job is completed the folder structure will look like this:
 
 ```
 raw_data/
+|-- fastq_dump_xanadu_NNNN.err
+|-- fastq_dump_xanadu_NNNN.out
 |-- LB2A_SRR1964642.fastq.gz
 |-- LB2A_SRR1964643.fastq.gz
 |-- LC2A_SRR1964644.fastq.gz
 `-- LC2A_SRR1964645.fastq.gz
 ```   
 
-These files are compressed using gzip. It's good practice to keep sequence files compressed. Most bioinformatics programs can read them directly without needing to decompress them first, and it doesn't get in the way of inspecting them either. Lets have a look at at the contents of one of the fastq-files:  
+These files are compressed using gzip. It's good practice to keep sequence files compressed. Most bioinformatics programs can read them directly without needing to decompress them first, and it doesn't get in the way of inspecting them either. The .out and .err files are output produced by SLURM that you can use to troubleshoot if things go wrong. Lets have a look at at the contents of one of the fastq-files:  
 
 ```bash
 zcat LB2A_SRR1964642.fastq.gz | head -n 12
@@ -156,106 +157,57 @@ Each sequence record has four lines. The first is the sequence name, beginning w
 
 ## 3. Quality Control Using Trimmomatic  
 
-Sickle performs quality control on illumina paired-end and single-end short reads data. To check the options provided by sickle program:   
+`Trimmomatic` is commonly used to trim low quality and adapter contaminated sequences. 
+
+Our usage looks like this for a single sample:
+
 ```bash
-module load sickle
+module load Trimmomatic/0.39
+
+java -jar $Trimmomatic SE
+	-threads 12 \
+	../raw_data/LB2A_SRR1964642.fastq.gz \
+	LB2A_SRR1964642_trim.fastq.gz \
+	ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
+	SLIDINGWINDOW:4:20 \
+	MINLEN:45
 ```
 
-which will load the sickle program and to check the usage, just type `sickle` on the terminal window.  
-```bash 
-Usage: sickle  [options]
+We call `SE` for single-end mode, we request 12 processor threads be used, and we specify the input and output file names. The `ILLUMINACLIP:TruSeq3-SE.fa:2:30:10` command searches for adapter sequence, so we provide a fasta file containing the adapters used in the library preparation, and the numbers control the parameters of adapter matching (see the [manual](http://www.usadellab.org/cms/?page=trimmomatic) for more details). `SLIDINGWINDOW:4:20` scans through the read, cutting the read when the average base quality in a 4 base window drops below 20. We linked to an explanation of phred-scaled quality scores above, but for reference, scores of 10 and 20 correspond to base call error probabilities of 0.1 and 0.01, respectively. `MINLEN:45` causes reads to be dropped if they have been trimmed to less than 45bp. 
 
-Command:
-pe	paired-end sequence trimming
-se	single-end sequence trimming
+The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder. Navigate there and run the script by `sbatch fastq_trimming.sh`. 
 
---help, display this help and exit
---version, output version  Information and exit
-```  
+Following the `trimmomatic` run, the resulting file structure will look as follows:  
 
-Since we have single end sequences, typing `sickle se` will give the single-end-read options:
-```bash
-Usage: sickle se [options] -f  -t  -o 
-
-Options:
--f, --fastq-file, Input fastq file (required)
--t, --qual-type, Type of quality values (solexa (CASAVA < 1.3), illumina (CASAVA 1.3 to 1.7), sanger (which is CASAVA >= 1.8)) (required)
--o, --output-file, Output trimmed fastq file (required)
--q, --qual-threshold, Threshold for trimming based on average quality in a window. Default 20.
--l, --length-threshold, Threshold to keep a read based on length after trimming. Default 20.
--x, --no-fiveprime, Don't do five prime trimming.
--n, --trunc-n, Truncate sequences at position of first N.
--g, --gzip-output, Output gzipped files.
---quiet, Don't print out any trimming  Information
---help, display this help and exit
---version, output version  Information and exit
-```  
-
-The quality may be any score from 0 to 40. The default of 20 is much too low for a robust analysis. We want to select only reads with a quality of 35 or better. Additionally, the desired length of each read is 50bp. Again, we see that a default of 20 is much too low for analysis confidence. We want to select only reads whose lengths exceed 45bp. Lastly, we must know the scoring type. While the quality type is not listed on the SRA pages, most SRA reads use the "sanger" quality type. Unless explicitly stated, try running sickle using the sanger qualities. If an error is returned, try illumina. If another error is returned, lastly try solexa.  
-
-Let's put all of this together for our sickle script using our downloaded fastq files:
-```bash
-module load sickle/1.33
-
-sickle se -f ../raw_data/LB2A_SRR1964642.fastq -t sanger -o trimmed_LB2A_SRR1964642.fastq -q 30 -l 50
-sickle se -f ../raw_data/LB2A_SRR1964643.fastq -t sanger -o trimmed_LB2A_SRR1964643.fastq -q 30 -l 50
-sickle se -f ../raw_data/LC2A_SRR1964644.fastq -t sanger -o trimmed_LC2A_SRR1964644.fastq -q 30 -l 50
-sickle se -f ../raw_data/LC2A_SRR1964645.fastq -t sanger -o trimmed_LC2A_SRR1964645.fastq -q 30 -l 50
-```  
-
-The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder.  
-
-Following the sickle run, the resulting file structure will look as follows:  
 ```bash
 quality_control/
+├── fastq_trimming_NNNNN.err
+├── fastq_trimming_NNNNN.out
 ├── fastq_trimming.sh
-├── trimmed_LB2A_SRR1964642.fastq
-├── trimmed_LB2A_SRR1964643.fastq
-├── trimmed_LC2A_SRR1964644.fastq
-└── trimmed_LC2A_SRR1964645.fastq
+├── LB2A_SRR1964642_trim.fastq.gz
+├── LB2A_SRR1964643.trim.fastq.gz
+├── LC2A_SRR1964644.trim.fastq.gz
+└── LC2A_SRR1964645.trim.fastq.gz
 ```  
 
-Examine the .out file generated during the run. It will provide a summary of the quality control process.  
+Examine the .out file generated during the run. Summaries of how many reads were retained for each file were written there.  
+
 ```
-SE input file: ../raw_data/LB2A_SRR1964642.fastq
-
-Total FastQ records: 26424138
-FastQ records kept: 23681970
-FastQ records discarded: 2742168
-
-
-SE input file: ../raw_data/LB2A_SRR1964643.fastq
-
-Total FastQ records: 26424138
-FastQ records kept: 23064271
-FastQ records discarded: 3359867
-
-
-SE input file: ../raw_data/LC2A_SRR1964644.fastq
-
-Total FastQ records: 25746094
-FastQ records kept: 23273009
-FastQ records discarded: 2473085
-
-
-SE input file: ../raw_data/LC2A_SRR1964645.fastq
-
-Total FastQ records: 25746094
-FastQ records kept: 23586197
-FastQ records discarded: 2159897
+######## INSERT SUMMARIES
 ```  
 
 ## 4. FASTQC Before and After Quality Control
+
 It is helpful to see how the quality of the data has changed after using sickle. To do this, we will be using the commandline versions of fastqc and MultiQC. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
 
 ```bash
 dir="before"
 
 module load fastqc/0.11.5
-fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964642.fastq
-fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964643.fastq
-fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq
-fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq
+fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964642.fastq.gz
+fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964643.fastq.gz
+fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq.gz
+fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq.gz
 ```  
 
 The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) which is located in fastqc folder.  
@@ -265,10 +217,10 @@ The same command can be run on the fastq files after the trimming using fastqc p
 dir="after"
 
 module load fastqc/0.11.5
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964642.fastq -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LB2A_SRR1964643.fastq -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964644.fastq -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/trimmed_LC2A_SRR1964645.fastq -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/LB2A_SRR1964642.trim.fastq.gz -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/LB2A_SRR1964643.trim.fastq.gz -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964644.trim.fastq.gz -t 8
+fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964645.trim.fastq.gz -t 8
 ```  
 
 The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in fastqc folder.  
