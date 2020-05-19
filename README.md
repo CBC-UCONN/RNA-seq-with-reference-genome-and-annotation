@@ -7,7 +7,7 @@ This repository is a publicly available tutorial for differential expression ana
 Contents
 1. [Overview](#1-overview)
 2. [Accessing the Data using SRA-Toolkit](#2-accessing-the-data-using-sra-toolkit)  
-3. [Quality control using sickle](#3-quality-control-using-sickle)
+3. [Quality control using Trimmomatic](#3-quality-control-using-Trimmomatic)
 4. [FASTQC Before and After Quality Control](#4-fastqc-before-and-after-quality-control)
 5. [Aligning Reads to a Genome using hisat2](#5-aligning-reads-to-a-genome-using-hisat2)
 6. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
@@ -187,7 +187,8 @@ quality_control/
 ├── LB2A_SRR1964642_trim.fastq.gz
 ├── LB2A_SRR1964643.trim.fastq.gz
 ├── LC2A_SRR1964644.trim.fastq.gz
-└── LC2A_SRR1964645.trim.fastq.gz
+├── LC2A_SRR1964645.trim.fastq.gz
+└── TruSeq3-SE.fa
 ```  
 
 Examine the .out file generated during the run. Summaries of how many reads were retained for each file were written there.  
@@ -198,7 +199,7 @@ Examine the .out file generated during the run. Summaries of how many reads were
 
 ## 4. FASTQC Before and After Quality Control
 
-It is helpful to see how the quality of the data has changed after using sickle. To do this, we will be using the commandline versions of fastqc and MultiQC. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
+It is helpful to see how the quality of the data has changed after using `Trimmomatic`. To do this, we will be using the command-line versions of `fastqc` and `MultiQC`. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
 
 ```bash
 dir="before"
@@ -210,9 +211,9 @@ fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq.gz
 fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq.gz
 ```  
 
-The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) which is located in fastqc folder.  
+The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) which is located in the /fastqc folder.  
 
-The same command can be run on the fastq files after the trimming using fastqc program, and the comand will look like:
+The same command can be run on the fastq files after the trimming using fastqc program, and the comand will look like this:
 ```bash
 dir="after"
 
@@ -223,9 +224,10 @@ fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964644.trim.fastq.gz -t 8
 fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964645.trim.fastq.gz -t 8
 ```  
 
-The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in fastqc folder.  
+The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in /fastqc folder.  
  
-This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc/** will look like:  
+This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc/** will look like this:  
+
 ```
 fastqc/
 ├── after
@@ -248,20 +250,18 @@ fastqc/
 │   └── LC2A_SRR1964645_fastqc.zip
 ```  
 
-fastqc will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you may have to download them to your laptop using a **transfer.cam.uchc.edu** submit node as shown below: 
+`fastqc` will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you may have to download them to your laptop using a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu**. Copy the files as shown below, or use an FTP client such as FileZilla or Cyberduck: 
 
 ```bash
-scp user-name@transfer.cam.uchc.edu:/UCHC/PublicShare/RNASeq_Workshop/Marine/fastqc/before/*.html .
+scp user-name@transfer.cam.uchc.edu:~/path/to/cloned/git/repository/fastqc/before/*.html .
 ```
 
-Do not forget the '**.**' at the end of the above code; which means to download them to the current working directory in your computer. Likewise you can download the **HTML** files before timming and after trimming. 
-
+Do not forget the '**.**' at the end of the above code; which means to download the files to the current working directory in your computer. You can likewise download the **HTML** files for the trimmed reads. 
  
-
 Let's have a look at the file format from fastqc and multiqc. When loading the fastqc file, you will be greeted with this screen  
 ![](/images/fastqc1.png)  
 
-There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequences fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that sickle had not run properly. Let's look at the next index in the file:  
+There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequences fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that Trimmomatic had not run properly. Let's look at the next index in the file:  
 
 ![](/images/fastqc2.png)  
 
