@@ -14,11 +14,41 @@
 echo `hostname`
 
 #################################################################
-# Trimming of Reads using Sickle 
+# Trimming of Reads using Trimmomatic 
 #################################################################
-module load sickle/1.33 
+module load Trimmomatic/0.39
 
-sickle se -f ../raw_data/LB2A_SRR1964642.fastq -t sanger -o trimmed_LB2A_SRR1964642.fastq -q 30 -l 50
-sickle se -f ../raw_data/LB2A_SRR1964643.fastq -t sanger -o trimmed_LB2A_SRR1964643.fastq -q 30 -l 50
-sickle se -f ../raw_data/LC2A_SRR1964644.fastq -t sanger -o trimmed_LC2A_SRR1964644.fastq -q 30 -l 50 
-sickle se -f ../raw_data/LC2A_SRR1964645.fastq -t sanger -o trimmed_LC2A_SRR1964645.fastq -q 30 -l 50
+
+java -jar $Trimmomatic SE
+	-threads 12 \
+	../raw_data/LB2A_SRR1964642.fastq.gz \
+	LB2A_SRR1964642_trim.fastq.gz \
+	ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
+	SLIDINGWINDOW:4:20 \
+	MINLEN:45
+
+java -jar $Trimmomatic SE
+	-threads 12 \
+	../raw_data/LB2A_SRR1964643.fastq.gz \
+	LB2A_SRR1964643_trim.fastq.gz \
+	ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
+	SLIDINGWINDOW:4:20 \
+	MINLEN:45
+
+java -jar $Trimmomatic SE
+	-threads 12 \
+	../raw_data/LC2A_SRR1964644.fastq.gz \
+	LC2A_SRR1964644_trim.fastq.gz \
+	ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
+	SLIDINGWINDOW:4:20 \
+	MINLEN:45
+
+java -jar $Trimmomatic SE
+	-threads 12 \
+	../raw_data/LC2A_SRR1964644.fastq.gz \
+	LC2A_SRR1964644_trim.fastq.gz \
+	ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
+	SLIDINGWINDOW:4:20 \
+	MINLEN:45
+
+
