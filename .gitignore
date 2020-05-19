@@ -1,0 +1,11 @@
+**/data
+**/results
+*.out
+*.err
+*.zip
+*.gzip
+*fastq
+*html
+*.gz
+**/genome
+.DS_Store
