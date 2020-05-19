@@ -20,7 +20,7 @@ Contents
 
 ## 1. Overview  
 
-In this study, transcriptional responses to three environmental stresses were examined in the large yellow croaker (_Larimichthys crocea_): heat stress (LC2A), cold stress (LA2A) and a 21-day fast (LF1A). mRNA was extracted from livers from from fishes from the three treatments and a control (LB2A) and sequenced on an Illumina HiSeq 2000. 
+In this study, transcriptional responses to three environmental stresses were examined in the large yellow croaker (_Larimichthys crocea_): heat stress (LC2A), cold stress (LA2A) and a 21-day fast (LF1A). mRNA was extracted from livers from from fishes from the three treatments and a control (LB2A) and sequenced on an Illumina HiSeq 2000. Sequencing was single-end, and each sequence is 90bp. 
 
 For the purposes of this tutorial, we will compare the control (LB2A) to the heat stress treatment (LC2A). 
 
@@ -104,37 +104,39 @@ The download commands:
 echo `hostname`
 
 module load sratoolkit/2.8.1  
-fastq-dump SRR1964642  
-fastq-dump SRR1964643
-fastq-dump SRR1964644  
-fastq-dump SRR1964645  
+fastq-dump --gzip SRR1964642
+fastq-dump --gzip SRR1964643
+fastq-dump --gzip SRR1964644
+fastq-dump --gzip SRR1964645
 ```
 
 Once downloaded, we rename the samples:  
 
 ```bash
-mv SRR1964642.fastq LB2A_SRR1964642.fastq
-mv SRR1964643.fastq LB2A_SRR1964643.fastq
-mv SRR1964644.fastq LC2A_SRR1964644.fastq
-mv SRR1964645.fastq LC2A_SRR1964645.fastq
+mv SRR1964642.fastq.gz LB2A_SRR1964642.fastq.gz
+mv SRR1964643.fastq.gz LB2A_SRR1964643.fastq.gz
+mv SRR1964644.fastq.gz LC2A_SRR1964644.fastq.gz
+mv SRR1964645.fastq.gz LC2A_SRR1964645.fastq.gz
 ```  
 
 The full script for slurm scheduler can be found in the `raw_data` folder. Before running it, add your own e-mail address to the `--mail-user` option (or delete the line entirely if you don't want an e-mail notification when the job completes). 
 
-Once the download and the renaming is done the folder structure will look like:  
+When you're ready, you can execute the script by entering `sbatch fastqc_dump_xanadu.sh` in the terminal. This submits the job to the SLURM scheduler. 
 
-```bash
+Once the job is completed the folder structure will look like this:  
+
+```
 raw_data/
-|-- LB2A_SRR1964642.fastq
-|-- LB2A_SRR1964643.fastq
-|-- LC2A_SRR1964644.fastq
-`-- LC2A_SRR1964645.fastq
+|-- LB2A_SRR1964642.fastq.gz
+|-- LB2A_SRR1964643.fastq.gz
+|-- LC2A_SRR1964644.fastq.gz
+`-- LC2A_SRR1964645.fastq.gz
 ```   
 
-Lets have a look at at the contents of one of the fastq-files:  
+These files are compressed using gzip. It's good practice to keep sequence files compressed. Most bioinformatics programs can read them directly without needing to decompress them first, and it doesn't get in the way of inspecting them either. Lets have a look at at the contents of one of the fastq-files:  
 
 ```bash
-head -n 12 LB2A_SRR1964642.fastq
+zcat LB2A_SRR1964642.fastq.gz | head -n 12
 
 @SRR1964642.1 FCC355RACXX:2:1101:1476:2162 length=90
 CAACATCTCAGTAGAAGGCGGCGCCTTCACCTTCGACGTGGGGAATCGCTTCAACCTCACGGGGGCTTTCCTCTACACGTCCTGTCCGGA
@@ -152,7 +154,7 @@ CCCFFFFFHHFFHJJJIIIJHHJJHHJJIJIIIJEHJIJDIJJIIJJIGIIIIJGHHHHFFFFFEEEEECDDDDEDEDDD
 
 Each sequence record has four lines. The first is the sequence name, beginning with `@`. The second is the nucleotide sequence. The third is a comment line, beginning with `+`, and which here only contains the sequence name again (it is often empty). The fourth are [phred-scaled base quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), encoded by [ASCII characters](https://drive5.com/usearch/manual/quality_score.html). Follow the links to learn more, but in short, the quality scores give the probability a called base is incorrect. 
 
-## 3. Quality Control Using Sickle  
+## 3. Quality Control Using Trimmomatic  
 
 Sickle performs quality control on illumina paired-end and single-end short reads data. To check the options provided by sickle program:   
 ```bash

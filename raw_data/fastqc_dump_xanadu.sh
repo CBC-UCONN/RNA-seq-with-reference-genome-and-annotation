@@ -18,16 +18,16 @@ echo `hostname`
 #################################################################
 module load sratoolkit/2.8.2
 
-fastq-dump SRR1964642
-fastq-dump SRR1964643
-fastq-dump SRR1964644
-fastq-dump SRR1964645
+fastq-dump --gzip SRR1964642
+fastq-dump --gzip SRR1964643
+fastq-dump --gzip SRR1964644
+fastq-dump --gzip SRR1964645
 
 #################################################################
 # Rename the files 
 #################################################################
-mv SRR1964642.fastq LB2A_SRR1964642.fastq
-mv SRR1964643.fastq LB2A_SRR1964643.fastq
-mv SRR1964644.fastq LC2A_SRR1964644.fastq
-mv SRR1964645.fastq LC2A_SRR1964645.fastq
+mv SRR1964642.fastq.gz LB2A_SRR1964642.fastq.gz
+mv SRR1964643.fastq.gz LB2A_SRR1964643.fastq.gz
+mv SRR1964644.fastq.gz LC2A_SRR1964644.fastq.gz
+mv SRR1964645.fastq.gz LC2A_SRR1964645.fastq.gz
 
