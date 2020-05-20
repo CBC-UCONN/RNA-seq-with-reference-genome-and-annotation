@@ -155,7 +155,7 @@ CCCFFFFFHHFFHJJJIIIJHHJJHHJJIJIIIJEHJIJDIJJIIJJIGIIIIJGHHHHFFFFFEEEEECDDDDEDEDDD
 
 Each sequence record has four lines. The first is the sequence name, beginning with `@`. The second is the nucleotide sequence. The third is a comment line, beginning with `+`, and which here only contains the sequence name again (it is often empty). The fourth are [phred-scaled base quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), encoded by [ASCII characters](https://drive5.com/usearch/manual/quality_score.html). Follow the links to learn more, but in short, the quality scores give the probability a called base is incorrect. 
 
-## 3. Quality Control Using Trimmomatic  
+## 3. Quality Control Using `Trimmomatic`  
 
 `Trimmomatic` is commonly used to trim low quality and adapter contaminated sequences. 
 
@@ -197,7 +197,7 @@ Examine the .out file generated during the run. Summaries of how many reads were
 ######## INSERT SUMMARIES
 ```  
 
-## 4. FASTQC Before and After Quality Control
+## 4. `FASTQC` Before and After Quality Control
 
 It is helpful to see how the quality of the data has changed after using `Trimmomatic`. To do this, we will be using the command-line versions of `fastqc` and `MultiQC`. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
 
@@ -297,34 +297,29 @@ The full slurm scripts are called [multiqc_raw.sh](/fastqc/multiqc_raw.sh) and [
 
 ## 5. Aligning Reads to a Genome using `HISAT2`  
 
-#### Building the Index:  
+#### Downloading the genome and building the Index:  
+
 HISAT2 is a fast and sensitive aligner for mapping next generation sequencing reads against a reference genome.
-In order to map the reads to a reference genome, first we must download the reference genome! Then we must make an index file. We will be downloading the reference genome (https://www.ncbi.nlm.nih.gov/genome/12197) from the ncbi database, using the wget command.  
+In order to map the reads to a reference genome we have to do a few things to prepare. First we must download the reference genome! We will download the reference genome (https://www.ncbi.nlm.nih.gov/genome/12197) from the NCBI database using the `wget` command.  
 
 ```bash
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.1_L_crocea_1.0/GCF_000972845.1_L_crocea_1.0_genomic.fna.gz
-gunzip GCF_000972845.1_L_crocea_1.0_genomic.fna.gz
+wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.2_L_crocea_2.0/GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
+gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
 ```
 
-We will use the hisat2-build option to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together build the index. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigatable way with pointers to the location of the information you seek within the encylopedia. Genome indexing is thus the structuring of a genome such that it is ordered in an easily navigatable way with pointers to where we can find whichever gene is being aligned. The genome index along with the trimmed fasta files are all you need to align the reads to the reference genome (the build command is included in the genome_indexing_and_alignment files, so it is not necessary to run now).  
+Next, we need to create an index. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigable way with pointers to the information you seek within. Genome indexing similarly structures the information contained in a genome so that a read mapper can quickly find possible mapping locations. 
+
+ We will use the `hisat2-build` module to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together comprise the index. The command to generate the index looks like this: 
 
 ```bash
 module load hisat2/2.0.5
-hisat2-build -p 4 GCF_000972845.1_L_crocea_1.0_genomic.fna L_crocea
+hisat2-build -p 4 GCF_000972845.2_L_crocea_2.0_genomic.fna L_crocea
 ```  
 
-```bash
-Usage: hisat2-build [options] <reference_in> <bt2_index_base>
-reference_in                comma-separated list of files with ref sequences
-hisat2_index_base           write ht2 data to files with this dir/basename
-
-Options:
-    -p                      number of threads
-```
-
-The full script for slurm scheduler can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh)  
+The full script can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh). Navigate there and submit it by entering `sbatch hisat2_index.sh` on the command-line.   
 
 After running the script, the following files will be generated as part of the index.  To refer to the index for  mapping the reads in the next step, you will use the file prefix, which in this case is: L_crocea  
+
 ```bash
 index/
 |-- GCF_000972845.1_L_crocea_1.0_genomic.fna
@@ -339,7 +334,7 @@ index/
 `-- L_crocea.8.ht2
 ```
 
-### Aligning the reads using HISAT2  
+### Aligning the reads using `HISAT2`  
 
 Once we have created the index, the next step is to align the reads with HISAT2 using the index we created. The program will give the output in SAM format. We will not delve into the intricacies of the SAM format here, but it is recommended to peruse https://en.wikipedia.org/wiki/SAM_(file_format) again to garner a greater understanding. We align our reads with the following code:  
 
