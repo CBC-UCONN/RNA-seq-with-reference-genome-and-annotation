@@ -164,7 +164,7 @@ Our usage looks like this for a single sample:
 ```bash
 module load Trimmomatic/0.39
 
-java -jar $Trimmomatic SE
+java -jar $Trimmomatic SE \
 	-threads 12 \
 	../raw_data/LB2A_SRR1964642.fastq.gz \
 	LB2A_SRR1964642_trim.fastq.gz \
@@ -175,7 +175,7 @@ java -jar $Trimmomatic SE
 
 We call `SE` for single-end mode, we request 12 processor threads be used, and we specify the input and output file names. The `ILLUMINACLIP:TruSeq3-SE.fa:2:30:10` command searches for adapter sequence, so we provide a fasta file containing the adapters used in the library preparation, and the numbers control the parameters of adapter matching (see the [manual](http://www.usadellab.org/cms/?page=trimmomatic) for more details). `SLIDINGWINDOW:4:20` scans through the read, cutting the read when the average base quality in a 4 base window drops below 20. We linked to an explanation of phred-scaled quality scores above, but for reference, scores of 10 and 20 correspond to base call error probabilities of 0.1 and 0.01, respectively. `MINLEN:45` causes reads to be dropped if they have been trimmed to less than 45bp. 
 
-The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder. Navigate there and run the script by `sbatch fastq_trimming.sh`. 
+The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder. Navigate there and run the script by enteriing `sbatch fastq_trimming.sh` on the command-line. 
 
 Following the `trimmomatic` run, the resulting file structure will look as follows:  
 
@@ -250,7 +250,7 @@ fastqc/
 │   └── LC2A_SRR1964645_fastqc.zip
 ```  
 
-`fastqc` will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you may have to download them to your laptop using a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu**. Copy the files as shown below, or use an FTP client such as FileZilla or Cyberduck: 
+`fastqc` will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you need to download them to your laptop. You can use a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu** and the unix utility `scp`. Copy the files as shown below, or use an FTP client with a graphical user interface such as FileZilla or Cyberduck: 
 
 ```bash
 scp user-name@transfer.cam.uchc.edu:~/path/to/cloned/git/repository/fastqc/before/*.html .
@@ -258,25 +258,25 @@ scp user-name@transfer.cam.uchc.edu:~/path/to/cloned/git/repository/fastqc/befor
 
 Do not forget the '**.**' at the end of the above code; which means to download the files to the current working directory in your computer. You can likewise download the **HTML** files for the trimmed reads. 
  
-Let's have a look at the file format from fastqc and multiqc. When loading the fastqc file, you will be greeted with this screen  
+Let's have a look at the file format from `fastqc` and `multiqc`. When loading the fastqc file, you will be greeted with this screen  
 ![](/images/fastqc1.png)  
 
-There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequences fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that Trimmomatic had not run properly. Let's look at the next index in the file:  
+There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequence libraries fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that Trimmomatic had not run properly. Let's look at the next index in the file:  
 
 ![](/images/fastqc2.png)  
 
-This screen is simply a box-and-whiskers plot of our quality scores per base pair. Note that there is a large variance and lower mean scores (but still about in our desired range) for base pairs 1-5. These are the primer sequences! I will leave it to you to ponder the behavior of this graph. If you're stumped, you may want to learn how Illumina sequencing works.  
+This screen is simply a box-and-whiskers plot of our quality scores per base pair. Note that there is a large variance and lower mean scores (but still about in our desired range) for base pairs 1-5 and that sequence quality declines toward the 3' end of the read.  
 
 ![](/images/fastqc3.png)  
 
-This index is simply the total number of base pairs (y-axis) which have a given quality score (x-axis). This plot is discontinuous and discrete, and should you calculate the Riemann sum the result is the total number of base pairs present across all reads.  
+This figure shows the distribution of mean read qualities. You can see we have a peak at about 38, which corresponds to a per base error probability of 0.00016. 
 
-The last index at which we are going to look is the "Overrepresented Sequences" index:  
+The last panel at which we are going to look is the "Overrepresented Sequences" panel:  
 ![](images/fastqc4.png)  
 
-This is simply a list of sequences which appear disproportionately in our reads file. The reads file actually includes the primer sequences for this exact reason. When fastqc calculates a sequence which appears many times beyond the expected distribution, it may check the primer sequences in the reads file to determine if the sequence is a primer. If the sequence is not a primer, the result will be returned as "No Hit". Sequences which are returned as "No Hit" are most likely highly expressed genes.  
+This is simply a list of sequences which appear disproportionately in our reads file. FastQC checks these against common adapter sequences and will flag them as such if they match. It is often the case in RNA-Seq that sequence from very highly expressed genes turns up in this panel. It may be helpful to try to identify some of these sequences using BLAST if they take up a large percentage of your library. 
 
-When you have multiple HTML files to view it will be become much more tedious to open each file at a time, and look at them. So to get all the HTML into a one file you can use a program called [MultiQC](https://multiqc.info/), which will combine these files. The code to do that is shown below:
+When you have a large experiment with many samples, checking FastQC HTML files can be a tedious task. To get around this, you can use use a program called [MultiQC](https://multiqc.info/) to combine them into a single report. 
 
 For HTML files in the **before/** folder:
 ```bash
