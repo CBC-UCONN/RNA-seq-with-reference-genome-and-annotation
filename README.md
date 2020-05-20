@@ -295,7 +295,7 @@ multiqc --outdir trimmed_multiqc ./after/
 The full slurm scripts are called [multiqc_raw.sh](/fastqc/multiqc_raw.sh) and [multiqc_trimmed.sh](/fastqc/multiqc_trimmed.sh) which can be found in the **fastqc/** folder.  As discribed above you may have to transfer these file to your computer to view them.
 
 
-## 5. Aligning Reads to a Genome using hisat2  
+## 5. Aligning Reads to a Genome using `HISAT2`  
 
 #### Building the Index:  
 HISAT2 is a fast and sensitive aligner for mapping next generation sequencing reads against a reference genome.
