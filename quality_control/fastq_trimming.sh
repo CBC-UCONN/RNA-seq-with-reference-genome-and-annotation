@@ -45,8 +45,8 @@ java -jar $Trimmomatic SE
 
 java -jar $Trimmomatic SE
 	-threads 12 \
-	../raw_data/LC2A_SRR1964644.fastq.gz \
-	LC2A_SRR1964644_trim.fastq.gz \
+	../raw_data/LC2A_SRR1964645.fastq.gz \
+	LC2A_SRR1964645_trim.fastq.gz \
 	ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
 	SLIDINGWINDOW:4:20 \
 	MINLEN:45
