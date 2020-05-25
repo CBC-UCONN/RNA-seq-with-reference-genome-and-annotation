@@ -13,13 +13,24 @@
 
 echo `hostname`
 
-
 #################################################################
 # Aligning to Genome
 #################################################################
 module load hisat2/2.2.0
 
-hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LB2A_SRR1964642.fastq -S trimmed_LB2A_SRR1964642.sam
-hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LB2A_SRR1964643.fastq -S trimmed_LB2A_SRR1964643.sam
-hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LC2A_SRR1964644.fastq -S trimmed_LC2A_SRR1964644.sam
-hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LC2A_SRR1964645.fastq -S trimmed_LC2A_SRR1964645.sam
+hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
+	samtools view -S -h -u - | \
+	samtools sort -T SRR1964642 - >LB2A_SRR1964642.bam
+
+hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/LB2A_SRR1964643_trim.fastq.gz | \
+	samtools view -S -h -u - | \
+	samtools sort -T SRR1964643 - >LB2A_SRR1964643.bam
+
+hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/LC2A_SRR1964644_trim.fastq.gz | \
+	samtools view -S -h -u - | \
+	samtools sort -T SRR1964644 - >LC2A_SRR1964644.bam
+
+hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/LC2A_SRR1964645_trim.fastq.gz | \
+	samtools view -S -h -u - | \
+	samtools sort -T SRR1964645 - >LC2A_SRR1964645.bam
+
