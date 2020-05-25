@@ -19,7 +19,7 @@ echo `hostname`
 module load Trimmomatic/0.39
 
 
-java -jar $Trimmomatic SE
+java -jar $Trimmomatic SE \
 	-threads 12 \
 	../raw_data/LB2A_SRR1964642.fastq.gz \
 	LB2A_SRR1964642_trim.fastq.gz \
@@ -27,7 +27,7 @@ java -jar $Trimmomatic SE
 	SLIDINGWINDOW:4:20 \
 	MINLEN:45
 
-java -jar $Trimmomatic SE
+java -jar $Trimmomatic SE \
 	-threads 12 \
 	../raw_data/LB2A_SRR1964643.fastq.gz \
 	LB2A_SRR1964643_trim.fastq.gz \
@@ -35,7 +35,7 @@ java -jar $Trimmomatic SE
 	SLIDINGWINDOW:4:20 \
 	MINLEN:45
 
-java -jar $Trimmomatic SE
+java -jar $Trimmomatic SE \
 	-threads 12 \
 	../raw_data/LC2A_SRR1964644.fastq.gz \
 	LC2A_SRR1964644_trim.fastq.gz \
@@ -43,7 +43,7 @@ java -jar $Trimmomatic SE
 	SLIDINGWINDOW:4:20 \
 	MINLEN:45
 
-java -jar $Trimmomatic SE
+java -jar $Trimmomatic SE \
 	-threads 12 \
 	../raw_data/LC2A_SRR1964644.fastq.gz \
 	LC2A_SRR1964644_trim.fastq.gz \
