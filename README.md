@@ -207,7 +207,7 @@ TrimmomaticSE: Completed successfully
 
 ## 4. `FASTQC` Before and After Quality Control
 
-It is helpful to see how the quality of the data has changed after using `Trimmomatic`. To do this, we will be using the command-line versions of `fastqc` and `MultiQC`. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
+It is helpful to see how the quality of the data has changed after using `Trimmomatic`. To do this, we will be using the command-line versions of `fastqc` and `MultiQC`. These two programs create visual reports of the average quality of our reads.  
 
 ```bash
 dir="before"
@@ -219,7 +219,7 @@ fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq.gz
 fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq.gz
 ```  
 
-The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) which is located in the /fastqc folder.  
+The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) and is located in the /fastqc folder.  
 
 The same command can be run on the fastq files after the trimming using fastqc program, and the comand will look like this:
 ```bash
@@ -234,7 +234,7 @@ fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964645.trim.fastq.gz -t 8
 
 The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in /fastqc folder.  
  
-This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc/** will look like this:  
+This will produce html files with the quality reports. The file strucutre inside the folder **fastqc/** will look like this:  
 
 ```
 fastqc/
@@ -258,13 +258,13 @@ fastqc/
 │   └── LC2A_SRR1964645_fastqc.zip
 ```  
 
-`fastqc` will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you need to download them to your laptop. You can use a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu** and the unix utility `scp`. Copy the files as shown below, or use an FTP client with a graphical user interface such as FileZilla or Cyberduck: 
+To view the html files you need to download them to your laptop and open them in a web browser. You can use a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu** and the unix utility `scp`. Copy the files as shown below, or use an FTP client with a graphical user interface such as FileZilla or Cyberduck: 
 
 ```bash
 scp user-name@transfer.cam.uchc.edu:~/path/to/cloned/git/repository/fastqc/before/*.html .
 ```
 
-Do not forget the '**.**' at the end of the above code; which means to download the files to the current working directory in your computer. You can likewise download the **HTML** files for the trimmed reads. 
+The syntax is `scp x y`, meaning copy files `x` to location `y`. Do not forget the '**.**' at the end of the above code; which means to download the files to the current working directory in your computer. You can likewise download the **HTML** files for the trimmed reads. 
  
 Let's have a look at the output from `fastqc`. When loading the fastqc file, you will be greeted with this screen  
 ![](/images/fastqc1.png)  
@@ -315,9 +315,9 @@ wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.2_L_cr
 gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
 ```
 
-Next, we need to create an index. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigable way with pointers to the information you seek within. Genome indexing similarly structures the information contained in a genome so that a read mapper can quickly find possible mapping locations. 
+Next, we need to create a genome _index_. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigable way with pointers to the information you seek within. Genome indexing similarly structures the information contained in a genome so that a read mapper can quickly find possible mapping locations. 
 
- We will use the `hisat2-build` module to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together comprise the index. The command to generate the index looks like this: 
+We will use the `hisat2-build` module to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together comprise the index. The command to generate the index looks like this: 
 
 ```bash
 module load hisat2/2.0.5
@@ -326,7 +326,7 @@ hisat2-build -p 4 GCF_000972845.2_L_crocea_2.0_genomic.fna L_crocea
 
 The full script can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh). Navigate there and submit it by entering `sbatch hisat2_index.sh` on the command-line.   
 
-After running the script, the following files will be generated as part of the index.  To refer to the index for  mapping the reads in the next step, you will use the file prefix, which in this case is: L_crocea  
+After running the script, the following files will be generated as part of the index.  To refer to the index for mapping the reads in the next step, you will use the file prefix, which in this case is: L_crocea  
 
 ```bash
 index/

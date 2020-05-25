@@ -27,6 +27,6 @@ gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
 # Indexing the Genome
 #################################################################
 
-module load hisat2/2.0.5
+module load hisat2/2.2.0
 
 hisat2-build -p 16 GCF_000972845.2_L_crocea_2.0_genomic.fna L_crocea

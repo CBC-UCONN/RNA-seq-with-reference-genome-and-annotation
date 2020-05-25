@@ -17,7 +17,7 @@ echo `hostname`
 #################################################################
 # Aligning to Genome
 #################################################################
-module load hisat2/2.0.5
+module load hisat2/2.2.0
 
 hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LB2A_SRR1964642.fastq -S trimmed_LB2A_SRR1964642.sam
 hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LB2A_SRR1964643.fastq -S trimmed_LB2A_SRR1964643.sam
