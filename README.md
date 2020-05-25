@@ -7,7 +7,7 @@ This repository is a publicly available tutorial for differential expression ana
 Contents
 1. [Overview](#1-overview)
 2. [Accessing the Data using SRA-Toolkit](#2-accessing-the-data-using-sra-toolkit)  
-3. [Quality control using sickle](#3-quality-control-using-sickle)
+3. [Quality control using Trimmomatic](#3-quality-control-using-Trimmomatic)
 4. [FASTQC Before and After Quality Control](#4-fastqc-before-and-after-quality-control)
 5. [Aligning Reads to a Genome using hisat2](#5-aligning-reads-to-a-genome-using-hisat2)
 6. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
@@ -155,7 +155,7 @@ CCCFFFFFHHFFHJJJIIIJHHJJHHJJIJIIIJEHJIJDIJJIIJJIGIIIIJGHHHHFFFFFEEEEECDDDDEDEDDD
 
 Each sequence record has four lines. The first is the sequence name, beginning with `@`. The second is the nucleotide sequence. The third is a comment line, beginning with `+`, and which here only contains the sequence name again (it is often empty). The fourth are [phred-scaled base quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), encoded by [ASCII characters](https://drive5.com/usearch/manual/quality_score.html). Follow the links to learn more, but in short, the quality scores give the probability a called base is incorrect. 
 
-## 3. Quality Control Using Trimmomatic  
+## 3. Quality Control Using `Trimmomatic`  
 
 `Trimmomatic` is commonly used to trim low quality and adapter contaminated sequences. 
 
@@ -164,7 +164,7 @@ Our usage looks like this for a single sample:
 ```bash
 module load Trimmomatic/0.39
 
-java -jar $Trimmomatic SE
+java -jar $Trimmomatic SE \
 	-threads 12 \
 	../raw_data/LB2A_SRR1964642.fastq.gz \
 	LB2A_SRR1964642_trim.fastq.gz \
@@ -175,7 +175,7 @@ java -jar $Trimmomatic SE
 
 We call `SE` for single-end mode, we request 12 processor threads be used, and we specify the input and output file names. The `ILLUMINACLIP:TruSeq3-SE.fa:2:30:10` command searches for adapter sequence, so we provide a fasta file containing the adapters used in the library preparation, and the numbers control the parameters of adapter matching (see the [manual](http://www.usadellab.org/cms/?page=trimmomatic) for more details). `SLIDINGWINDOW:4:20` scans through the read, cutting the read when the average base quality in a 4 base window drops below 20. We linked to an explanation of phred-scaled quality scores above, but for reference, scores of 10 and 20 correspond to base call error probabilities of 0.1 and 0.01, respectively. `MINLEN:45` causes reads to be dropped if they have been trimmed to less than 45bp. 
 
-The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder. Navigate there and run the script by `sbatch fastq_trimming.sh`. 
+The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder. Navigate there and run the script by enteriing `sbatch fastq_trimming.sh` on the command-line. 
 
 Following the `trimmomatic` run, the resulting file structure will look as follows:  
 
@@ -187,7 +187,8 @@ quality_control/
 ├── LB2A_SRR1964642_trim.fastq.gz
 ├── LB2A_SRR1964643.trim.fastq.gz
 ├── LC2A_SRR1964644.trim.fastq.gz
-└── LC2A_SRR1964645.trim.fastq.gz
+├── LC2A_SRR1964645.trim.fastq.gz
+└── TruSeq3-SE.fa
 ```  
 
 Examine the .out file generated during the run. Summaries of how many reads were retained for each file were written there.  
@@ -196,9 +197,9 @@ Examine the .out file generated during the run. Summaries of how many reads were
 ######## INSERT SUMMARIES
 ```  
 
-## 4. FASTQC Before and After Quality Control
+## 4. `FASTQC` Before and After Quality Control
 
-It is helpful to see how the quality of the data has changed after using sickle. To do this, we will be using the commandline versions of fastqc and MultiQC. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
+It is helpful to see how the quality of the data has changed after using `Trimmomatic`. To do this, we will be using the command-line versions of `fastqc` and `MultiQC`. These two programs simply create reports of the average quality of our trimmed reads, with some graphs.  
 
 ```bash
 dir="before"
@@ -210,9 +211,9 @@ fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq.gz
 fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq.gz
 ```  
 
-The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) which is located in fastqc folder.  
+The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) which is located in the /fastqc folder.  
 
-The same command can be run on the fastq files after the trimming using fastqc program, and the comand will look like:
+The same command can be run on the fastq files after the trimming using fastqc program, and the comand will look like this:
 ```bash
 dir="after"
 
@@ -223,9 +224,10 @@ fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964644.trim.fastq.gz -t 8
 fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964645.trim.fastq.gz -t 8
 ```  
 
-The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in fastqc folder.  
+The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in /fastqc folder.  
  
-This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc/** will look like:  
+This will produce the html files with the quality reports and the file strucutre in side the folder **fastqc/** will look like this:  
+
 ```
 fastqc/
 ├── after
@@ -248,35 +250,33 @@ fastqc/
 │   └── LC2A_SRR1964645_fastqc.zip
 ```  
 
-fastqc will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you may have to download them to your laptop using a **transfer.cam.uchc.edu** submit node as shown below: 
+`fastqc` will create the **HTML files** in the **fastqc/** directory as shown above. To view the above files you need to download them to your laptop. You can use a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu** and the unix utility `scp`. Copy the files as shown below, or use an FTP client with a graphical user interface such as FileZilla or Cyberduck: 
 
 ```bash
-scp user-name@transfer.cam.uchc.edu:/UCHC/PublicShare/RNASeq_Workshop/Marine/fastqc/before/*.html .
+scp user-name@transfer.cam.uchc.edu:~/path/to/cloned/git/repository/fastqc/before/*.html .
 ```
 
-Do not forget the '**.**' at the end of the above code; which means to download them to the current working directory in your computer. Likewise you can download the **HTML** files before timming and after trimming. 
-
+Do not forget the '**.**' at the end of the above code; which means to download the files to the current working directory in your computer. You can likewise download the **HTML** files for the trimmed reads. 
  
-
-Let's have a look at the file format from fastqc and multiqc. When loading the fastqc file, you will be greeted with this screen  
+Let's have a look at the file format from `fastqc` and `multiqc`. When loading the fastqc file, you will be greeted with this screen  
 ![](/images/fastqc1.png)  
 
-There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequences fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that sickle had not run properly. Let's look at the next index in the file:  
+There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequence libraries fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that Trimmomatic had not run properly. Let's look at the next index in the file:  
 
 ![](/images/fastqc2.png)  
 
-This screen is simply a box-and-whiskers plot of our quality scores per base pair. Note that there is a large variance and lower mean scores (but still about in our desired range) for base pairs 1-5. These are the primer sequences! I will leave it to you to ponder the behavior of this graph. If you're stumped, you may want to learn how Illumina sequencing works.  
+This screen is simply a box-and-whiskers plot of our quality scores per base pair. Note that there is a large variance and lower mean scores (but still about in our desired range) for base pairs 1-5 and that sequence quality declines toward the 3' end of the read.  
 
 ![](/images/fastqc3.png)  
 
-This index is simply the total number of base pairs (y-axis) which have a given quality score (x-axis). This plot is discontinuous and discrete, and should you calculate the Riemann sum the result is the total number of base pairs present across all reads.  
+This figure shows the distribution of mean read qualities. You can see we have a peak at about 38, which corresponds to a per base error probability of 0.00016. 
 
-The last index at which we are going to look is the "Overrepresented Sequences" index:  
+The last panel at which we are going to look is the "Overrepresented Sequences" panel:  
 ![](images/fastqc4.png)  
 
-This is simply a list of sequences which appear disproportionately in our reads file. The reads file actually includes the primer sequences for this exact reason. When fastqc calculates a sequence which appears many times beyond the expected distribution, it may check the primer sequences in the reads file to determine if the sequence is a primer. If the sequence is not a primer, the result will be returned as "No Hit". Sequences which are returned as "No Hit" are most likely highly expressed genes.  
+This is simply a list of sequences which appear disproportionately in our reads file. FastQC checks these against common adapter sequences and will flag them as such if they match. It is often the case in RNA-Seq that sequence from very highly expressed genes turns up in this panel. It may be helpful to try to identify some of these sequences using BLAST if they take up a large percentage of your library. 
 
-When you have multiple HTML files to view it will be become much more tedious to open each file at a time, and look at them. So to get all the HTML into a one file you can use a program called [MultiQC](https://multiqc.info/), which will combine these files. The code to do that is shown below:
+When you have a large experiment with many samples, checking FastQC HTML files can be a tedious task. To get around this, you can use use a program called [MultiQC](https://multiqc.info/) to combine them into a single report. 
 
 For HTML files in the **before/** folder:
 ```bash
@@ -295,36 +295,31 @@ multiqc --outdir trimmed_multiqc ./after/
 The full slurm scripts are called [multiqc_raw.sh](/fastqc/multiqc_raw.sh) and [multiqc_trimmed.sh](/fastqc/multiqc_trimmed.sh) which can be found in the **fastqc/** folder.  As discribed above you may have to transfer these file to your computer to view them.
 
 
-## 5. Aligning Reads to a Genome using hisat2  
+## 5. Aligning Reads to a Genome using `HISAT2`  
 
-#### Building the Index:  
+#### Downloading the genome and building the Index:  
+
 HISAT2 is a fast and sensitive aligner for mapping next generation sequencing reads against a reference genome.
-In order to map the reads to a reference genome, first we must download the reference genome! Then we must make an index file. We will be downloading the reference genome (https://www.ncbi.nlm.nih.gov/genome/12197) from the ncbi database, using the wget command.  
+In order to map the reads to a reference genome we have to do a few things to prepare. First we must download the reference genome! We will download the reference genome (https://www.ncbi.nlm.nih.gov/genome/12197) from the NCBI database using the `wget` command.  
 
 ```bash
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.1_L_crocea_1.0/GCF_000972845.1_L_crocea_1.0_genomic.fna.gz
-gunzip GCF_000972845.1_L_crocea_1.0_genomic.fna.gz
+wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.2_L_crocea_2.0/GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
+gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
 ```
 
-We will use the hisat2-build option to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together build the index. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigatable way with pointers to the location of the information you seek within the encylopedia. Genome indexing is thus the structuring of a genome such that it is ordered in an easily navigatable way with pointers to where we can find whichever gene is being aligned. The genome index along with the trimmed fasta files are all you need to align the reads to the reference genome (the build command is included in the genome_indexing_and_alignment files, so it is not necessary to run now).  
+Next, we need to create an index. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigable way with pointers to the information you seek within. Genome indexing similarly structures the information contained in a genome so that a read mapper can quickly find possible mapping locations. 
+
+ We will use the `hisat2-build` module to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together comprise the index. The command to generate the index looks like this: 
 
 ```bash
 module load hisat2/2.0.5
-hisat2-build -p 4 GCF_000972845.1_L_crocea_1.0_genomic.fna L_crocea
+hisat2-build -p 4 GCF_000972845.2_L_crocea_2.0_genomic.fna L_crocea
 ```  
 
-```bash
-Usage: hisat2-build [options] <reference_in> <bt2_index_base>
-reference_in                comma-separated list of files with ref sequences
-hisat2_index_base           write ht2 data to files with this dir/basename
-
-Options:
-    -p                      number of threads
-```
-
-The full script for slurm scheduler can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh)  
+The full script can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh). Navigate there and submit it by entering `sbatch hisat2_index.sh` on the command-line.   
 
 After running the script, the following files will be generated as part of the index.  To refer to the index for  mapping the reads in the next step, you will use the file prefix, which in this case is: L_crocea  
+
 ```bash
 index/
 |-- GCF_000972845.1_L_crocea_1.0_genomic.fna
@@ -339,7 +334,7 @@ index/
 `-- L_crocea.8.ht2
 ```
 
-### Aligning the reads using HISAT2  
+### Aligning the reads using `HISAT2`  
 
 Once we have created the index, the next step is to align the reads with HISAT2 using the index we created. The program will give the output in SAM format. We will not delve into the intricacies of the SAM format here, but it is recommended to peruse https://en.wikipedia.org/wiki/SAM_(file_format) again to garner a greater understanding. We align our reads with the following code:  
 

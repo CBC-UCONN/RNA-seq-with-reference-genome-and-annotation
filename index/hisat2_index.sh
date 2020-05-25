@@ -16,12 +16,17 @@ echo `hostname`
 #################################################################
 # Download the Genome
 #################################################################
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.1_L_crocea_1.0/GCF_000972845.1_L_crocea_1.0_genomic.fna.gz
 
-gunzip *.gz
+# download it
+wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.2_L_crocea_2.0/GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
+
+# decompress it
+gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
 
 #################################################################
 # Indexing the Genome
 #################################################################
+
 module load hisat2/2.0.5
-hisat2-build -p 16 GCF_000972845.1_L_crocea_1.0_genomic.fna L_crocea
+
+hisat2-build -p 16 GCF_000972845.2_L_crocea_2.0_genomic.fna L_crocea
