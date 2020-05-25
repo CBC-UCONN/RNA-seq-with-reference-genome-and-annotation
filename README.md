@@ -266,7 +266,7 @@ scp user-name@transfer.cam.uchc.edu:~/path/to/cloned/git/repository/fastqc/befor
 
 Do not forget the '**.**' at the end of the above code; which means to download the files to the current working directory in your computer. You can likewise download the **HTML** files for the trimmed reads. 
  
-Let's have a look at the file format from `fastqc` and `multiqc`. When loading the fastqc file, you will be greeted with this screen  
+Let's have a look at the output from `fastqc`. When loading the fastqc file, you will be greeted with this screen  
 ![](/images/fastqc1.png)  
 
 There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequence libraries fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that Trimmomatic had not run properly. Let's look at the next index in the file:  
