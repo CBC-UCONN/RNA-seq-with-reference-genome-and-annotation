@@ -65,7 +65,7 @@ Each script contains a header section which specifies computational resources (p
 #SBATCH -e %x_%j.err
 ```
 
-Before beginning, you need to understand a few aspects of the Xanadu server. When first logging into Xanadu from your local terminal, you will be connected to a **submit node**. The submit node is meant to serve as an **interface** for users, and under no circumstances should you use it to do serious computation. If you do, the system administrators may kill your job, causing you to lose your work, and then send you a mean e-mail about it. On the submit node you may manage and inspect files, write and edit scripts, and do other very light duty work. To analyze data, you need to request access to one or more **compute nodes** through SLURM. This tutorial will not teach you how to configure the SLURM header. Therefore, before moving on, it would be helpful to read and master the topics covered in the [Xanadu tutorial](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/) and our [guide to resource requests](https://github.com/CBC-UCONN/CBC_Docs/wiki/Requesting-resource-allocations-in-SLURM).
+Before beginning, you need to understand a few aspects of the Xanadu server. When first logging into Xanadu from your local terminal, you will be connected to a **submit node**. The submit node is meant to serve as an **interface** for users, and under no circumstances should you use it to do serious computation. If you do, the system administrators may kill your job and send you a mean e-mail about it. This may cause you to lose work, and worse, feel badly about yourself. On the submit node you may manage and inspect files, write and edit scripts, and do other very light duty work. To analyze data, you need to request access to one or more **compute nodes** through SLURM. This tutorial will not teach you how to configure the SLURM header. Therefore, before moving on, it would be helpful to read and master the topics covered in the [Xanadu tutorial](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/) and our [guide to resource requests](https://github.com/CBC-UCONN/CBC_Docs/wiki/Requesting-resource-allocations-in-SLURM).
 
 
 ## 2. Accessing the Data using SRA-Toolkit    
@@ -330,7 +330,7 @@ After running the script, the following files will be generated as part of the i
 
 ```bash
 index/
-|-- GCF_000972845.1_L_crocea_1.0_genomic.fna
+|-- GCF_000972845.2_L_crocea_2.0_genomic.fna
 |-- hisat2_index.sh
 |-- L_crocea.1.ht2
 |-- L_crocea.2.ht2
@@ -344,26 +344,21 @@ index/
 
 ### Aligning the reads using `HISAT2`  
 
-Once we have created the index, the next step is to align the reads with HISAT2 using the index we created. The program will give the output in SAM format. We will not delve into the intricacies of the SAM format here, but it is recommended to peruse https://en.wikipedia.org/wiki/SAM_(file_format) again to garner a greater understanding. We align our reads with the following code:  
+Once we have created the index, the next step is to align the reads to the reference genome with `HISAT2`. By default `HISAT2` outputs the alignments in SAM format. We won't go over the format in detail in this tutorial, but should you actually need to look at the alignment files, it would be helpful to read over the [format specification](https://samtools.github.io/hts-specs/SAMv1.pdf) or have a look the [wikipedia page](https://en.wikipedia.org/wiki/SAM_(file_format)). 
+
+Raw SAM formatted files have two issues. First, they are uncompressed, so they take up much more space than they need to and are slower to read and write. Second, `HISAT2` writes the alignments out in the same order it reads the sequences from the fastq file, but for downstream applications, they need to be sorted by **genome coordinate**. 
+
+To deal with these issues, we'll use a _pipe_ to send the results from `HISAT2` to `samtools` to sort the sequences, convert them to binary format and compress them. The resulting files will be in BAM format. We can then use `samtools` to read or otherwise manipulate them. We use pipes rather than writing intermediate files because it is much more efficient both computationally, and requires less cleanup of useless intermediate files. 
+
+Here's an example of our alignment code:
 
 ```bash
-Usage: hisat2 [options]* -x <ht2-idx>  [-S <sam>]
--x <ht2-idx>        path to the Index-filename-prefix (minus trailing .X.ht2) 
-
-Options:
--q                  query input files are FASTQ .fq/.fastq (default)
--p                  number threads
---dta               reports alignments tailored for transcript assemblers
-```
-
-Command for aligning the reads using hisat:
-```bash
-module load hisat2/2.0.5
-
-hisat2 -p 8 --dta -x ../index/L_crocea -q ../quality_control/trimmed_LB2A_SRR1964642.fastq -S trimmed_LB2A_SRR1964642.sam
+hisat2 -p 8 --dta -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
+	samtools view -S -h -u - | \
+	samtools sort -T SRR1964642 - >LB2A_SRR1964642.bam
 ```  
 
-The full script for slurm scheduler can be found in the **align/** folder by the name [align.sh](/align/align.sh)  
+The `|` is the pipe. It tells linux to use the output of the command executed on the left as the input for the command executed on the right. `samtools view` converts the SAM file to uncompressed BAM. `-S` indicates the input is SAM format. `-h` indicates the SAM header should be written to the output. `-u` indicates that uncompressed BAM format should be written (no need to compress until the end). `-` indicates `samtools` should take input from the pipe. `samtools sort` sorts and compressed the file. `-T` gives a temporary file prefix. The full script for slurm scheduler can be found in the **align/** folder by the name [align.sh](/align/align.sh)  
 
 Once the mapping have been completed, the file structure is as follows:  
 ```bash
