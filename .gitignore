@@ -6,6 +6,7 @@
 *.gff
 *.gtf
 *.bam
+*.bai
 *.ht2
 *.err
 *.zip
