@@ -17,6 +17,7 @@ echo `hostname`
 # Aligning to Genome
 #################################################################
 module load hisat2/2.2.0
+module load samtools/1.9
 
 hisat2 -p 8 --dta -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
 	samtools view -S -h -u - | \
@@ -33,4 +34,13 @@ hisat2 -p 8 --dta -x ../index/L_crocea -U ../quality_control/LC2A_SRR1964644_tri
 hisat2 -p 8 --dta -x ../index/L_crocea -U ../quality_control/LC2A_SRR1964645_trim.fastq.gz | \
 	samtools view -S -h -u - | \
 	samtools sort -T SRR1964645 - >LC2A_SRR1964645.bam
+
+
+# index bam files
+samtools index LB2A_SRR1964642.bam
+samtools index LB2A_SRR1964643.bam
+samtools index LC2A_SRR1964644.bam
+samtools index LC2A_SRR1964645.bam
+
+
 

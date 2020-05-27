@@ -134,7 +134,7 @@ raw_data/
 `-- LC2A_SRR1964645.fastq.gz
 ```   
 
-These files are compressed using gzip. It's good practice to keep sequence files compressed. Most bioinformatics programs can read them directly without needing to decompress them first, and it doesn't get in the way of inspecting them either. The .out and .err files are output produced by SLURM that you can use to troubleshoot if things go wrong. Lets have a look at at the contents of one of the fastq-files:  
+The sequence files are in fastq format and compressed using gzip (indicated by the `.gz`). It's good practice to keep sequence files compressed. Most bioinformatics programs can read them directly without needing to decompress them first, and it doesn't get in the way of inspecting them either. The `.out` and `.err` files are output produced by SLURM that you can use to troubleshoot if things go wrong. Lets have a look at at the contents of one of the fastq files:  
 
 ```bash
 zcat LB2A_SRR1964642.fastq.gz | head -n 12
@@ -346,11 +346,11 @@ index/
 
 Once we have created the index, the next step is to align the reads to the reference genome with `HISAT2`. By default `HISAT2` outputs the alignments in SAM format. We won't go over the format in detail in this tutorial, but should you actually need to look at the alignment files, it would be helpful to read over the [format specification](https://samtools.github.io/hts-specs/SAMv1.pdf) or have a look the [wikipedia page](https://en.wikipedia.org/wiki/SAM_(file_format)). 
 
-Raw SAM formatted files have two issues. First, they are uncompressed, so they take up much more space than they need to and are slower to read and write. Second, `HISAT2` writes the alignments out in the same order it reads the sequences from the fastq file, but for downstream applications, they need to be sorted by **genome coordinate**. 
+Raw SAM formatted files have two issues. First, they are uncompressed. Because of this they take up much more space than they need to and are slower to read and write. Second, `HISAT2` writes the alignments out in the same order it reads the sequences from the fastq file, but for downstream applications, they need to be sorted by **genome coordinate**. 
 
-To deal with these issues, we'll use a _pipe_ to send the results from `HISAT2` to `samtools` to sort the sequences, convert them to binary format and compress them. The resulting files will be in BAM format. We can then use `samtools` to read or otherwise manipulate them. We use pipes rather than writing intermediate files because it is much more efficient both computationally, and requires less cleanup of useless intermediate files. 
+To deal with these issues, we'll use a _pipe_ to send the results from `HISAT2` to `samtools` to sort the sequences, convert them to binary format and compress them. The resulting files will be in BAM format. We can then use `samtools` to read or otherwise manipulate them. We use pipes rather than writing intermediate files because it is much more efficient computationally, and requires less cleanup of unneeded intermediate files. 
 
-Here's an example of our alignment code:
+Here's our code for aligning one sample:
 
 ```bash
 hisat2 -p 8 --dta -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
@@ -358,91 +358,78 @@ hisat2 -p 8 --dta -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_tri
 	samtools sort -T SRR1964642 - >LB2A_SRR1964642.bam
 ```  
 
-The `|` is the pipe. It tells linux to use the output of the command executed on the left as the input for the command executed on the right. `samtools view` converts the SAM file to uncompressed BAM. `-S` indicates the input is SAM format. `-h` indicates the SAM header should be written to the output. `-u` indicates that uncompressed BAM format should be written (no need to compress until the end). `-` indicates `samtools` should take input from the pipe. `samtools sort` sorts and compressed the file. `-T` gives a temporary file prefix. The full script for slurm scheduler can be found in the **align/** folder by the name [align.sh](/align/align.sh)  
+The `|` is the pipe. It tells linux to use the output of the command to the left of the pipe as the input for the command to the right. You can chain together many commands using pipes. `samtools view` converts the SAM file produced by `hisat2` to uncompressed BAM. `-S` indicates the input is SAM format. `-h` indicates the SAM header should be written to the output. `-u` indicates that uncompressed BAM format should be written (no need to compress until the end). `-` indicates `samtools` should take input from the pipe. `samtools sort` sorts and compressed the file. `-T` gives a temporary file prefix. The full script for the slurm scheduler can be found in the **align/** directory by the name [align.sh](/align/align.sh). When you're ready, navigate there and execute it by entering `sbatch align.sh` on the command-line. 
 
-Once the mapping have been completed, the file structure is as follows:  
+Because BAM files are large and we may want to access specific sections quickly, we need to _index_ the bam files, just like we indexed the genome. Here we'll use `samtools` again. As an example:
+
+```bash
+samtools index LB2A_SRR1964642.bam
+```
+
+This creates a `.bam.bai` index file to accompany each BAM file. 
+
+Once the mapping and indexing have been completed, the file structure is as follows:  
 ```bash
 align/
-|-- align.sh
-|-- trim_LB2A_SRR1964642.sam
-|-- trim_LB2A_SRR1964643.sam
-|-- trim_LC2A_SRR1964644.sam
-`-- trim_LC2A_SRR1964645.sam
+├── align_NNNNNN.err
+├── align_NNNNNN.out
+├── align.sh
+├── LB2A_SRR1964642.bam
+├── LB2A_SRR1964642.bam.bai
+├── LB2A_SRR1964643.bam
+├── LB2A_SRR1964643.bam.bai
+├── LC2A_SRR1964644.bam
+├── LC2A_SRR1964644.bam.bai
+├── LC2A_SRR1964645.bam
+└── LC2A_SRR1964645.bam.bai
 ```  
 
-When HISAT2 completes its run, it will summarize each of it’s alignments, and it is written to the standard error file, which can be find in the same folder once the run is completed.   
+When `HISAT2` finishes aligning all the reads, it will write a summary which will be captured by SLURM in the file ending `.err`. 
 
 Alignment results for a single sample is shown below: 
 ```
-21799606 reads; of these:
-  21799606 (100.00%) were unpaired; of these:
-    1678851 (7.70%) aligned 0 times
-    15828295 (72.61%) aligned exactly 1 time
-    4292460 (19.69%) aligned >1 times
-92.30% overall alignment rate
+25664909 reads; of these:
+  25664909 (100.00%) were unpaired; of these:
+    1114878 (4.34%) aligned 0 times
+    23209585 (90.43%) aligned exactly 1 time
+    1340446 (5.22%) aligned >1 times
+95.66% overall alignment rate
 ```  
 
-Let's have a look at the SAM file:
+Let's have a look at the BAM file:
 ```bash
-head trimmed_LB2A_SRR1964642.sam
+module load samtools/1.9
+samtools view -H LB2A_SRR1964642.bam | head
 ```
 
 which will give:
 ```bash
-@HD VN:1.0 SO:unsorted
-@SQ SN:NW_017607850.1 LN:6737
-@SQ SN:NW_017607851.1 LN:5396
-@SQ SN:NW_017607852.1 LN:5050
-@SQ SN:NW_017607853.1 LN:5873
-@SQ SN:NW_017607854.1 LN:5692
-@SQ SN:NW_017607855.1 LN:11509
-@SQ SN:NW_017607856.1 LN:12722
-@SQ SN:NW_017607857.1 LN:42555
-@SQ SN:NW_017607858.1 LN:11917
+@HD	VN:1.0	SO:coordinate
+@SQ	SN:NC_040011.1	LN:43682218
+@SQ	SN:NC_040012.1	LN:14376772
+@SQ	SN:NC_040013.1	LN:52095323
+@SQ	SN:NC_040014.1	LN:6444570
+@SQ	SN:NC_040015.1	LN:5657075
+@SQ	SN:NC_040016.1	LN:27037660
+@SQ	SN:NC_040017.1	LN:29365971
+@SQ	SN:NC_040018.1	LN:33955600
+@SQ	SN:NC_040019.1	LN:13800884
 ```
 
-After reading up on the SAM file format, you know that the "@" sign means that we are in the headings section, not the alignment section! The sam file is quite large so there is little purpose in scrolling to find the alignments section (the file is also much too large for using the "grep" command to locate the alignment section). Because of the density of the sam file, it is compressed to binary to create a more easily tractable file for manipulation by future programs.  
+Here we've requested that `samtools` return only the header section, which contains lots of metadata about the file, including all the contig names in the genome (each @SQ line contains a contig name). Each line begins with an "@" sign. The header can be quite large, especially if there are many contigs in your reference. 
 
-The sam file then need to be converted in to bam format;  
-```bash
-samtools view -@ 4 -uhS trim_LB2A_SRR1964642.sam | samtools sort -@ 4 - sort_trim_LB2A_SRR1964642
-```  
+We can use `samtools` to access reads mapping to any part of the genome using the `view` submodule like this:
 
-The command discription for the samtools is given below:
-```bash
-Usage: samtools [command] [options] in.sam
-Command:
-view     prints all alignments in the specified input alignment file (in SAM, BAM, or CRAM format) to standard output in SAM format 
+`samtools view LB2A_SRR1964642.bam NC_040019.1:171000-172000`
 
-Options:
--h      Include the header in the output
--S      Indicate the input was in SAM format
--u      Output uncompressed BAM. This option saves time spent on compression/decompression and is thus preferred when the output is piped to another samtools command
--@      Number of processors
+This will print to the screen all the reads that mapped to the genomic interval `NC_040019.1:171000-172000`. 
 
-Usage: samtools [command] [-o out.bam]
-Command:
-sort    Sort alignments by leftmost coordinates
+You can use pipes and other linux tools to get basic information about these reads:
 
--o      Write the final sorted output to FILE, rather than to standard output.
-```  
+`samtools view LB2A_SRR1964642.bam NC_040019.1:171000-172000 | wc -l`
 
-Alternatively the sort function converts SAM files to BAM automatically. Therefore, we can cut through most of these options and do a simple "samtools sort -o <output.bam> <inupt.sam>. So we can also write the following command as well:  
-```bash
-samtools sort -@ 4 -o sort_trim_LB2A_SRR1964642.bam trimmed_LB2A_SRR1964642.sam
-``` 
+`wc -l` counts lines of text, so this command indicates that 411 reads map to this 1kb interval. 
 
-The full script for slurm scheduler can be found in the **align/** folder by the name [sam2bam.sh](/align/sam2bam.sh)  
-
-Once the conversion is done you will have the following files in the directory.  
-```bash  
-mapping/
-|-- sam2bam.sh
-|-- sort_trim_LB2A_SRR1964642.bam
-|-- sort_trim_LB2A_SRR1964643.bam
-|-- sort_trim_LC2A_SRR1964644.bam
-|-- sort_trim_LC2A_SRR1964645.bam
-```
 
 
 ## 6. Generating Total Read Counts from Alignment using htseq-count  
