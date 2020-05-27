@@ -308,11 +308,11 @@ The full slurm scripts are called [multiqc_raw.sh](/fastqc/multiqc_raw.sh) and [
 #### Downloading the genome and building the Index:  
 
 HISAT2 is a fast and sensitive aligner for mapping next generation sequencing reads against a reference genome.
-In order to map the reads to a reference genome we have to do a few things to prepare. First we must download the reference genome! We will download the reference genome (https://www.ncbi.nlm.nih.gov/genome/12197) from the NCBI database using the `wget` command.  
+In order to map the reads to a reference genome we have to do a few things to prepare. First we must download the reference genome! We will download the reference genome (http://useast.ensembl.org/Larimichthys_crocea/Info/Index) from the ENSEMBL database using the `wget` command.  
 
 ```bash
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.2_L_crocea_2.0/GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
-gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
+wget ftp://ftp.ensembl.org/pub/release-100/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
+gunzip Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
 ```
 
 Next, we need to create a genome _index_. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigable way with pointers to the information you seek within. Genome indexing similarly structures the information contained in a genome so that a read mapper can quickly find possible mapping locations. 
@@ -321,7 +321,7 @@ We will use the `hisat2-build` module to make a HISAT index file for the genome.
 
 ```bash
 module load hisat2/2.0.5
-hisat2-build -p 4 GCF_000972845.2_L_crocea_2.0_genomic.fna L_crocea
+hisat2-build -p 16 Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa L_crocea
 ```  
 
 The full script can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh). Navigate there and submit it by entering `sbatch hisat2_index.sh` on the command-line.   
@@ -330,7 +330,7 @@ After running the script, the following files will be generated as part of the i
 
 ```bash
 index/
-|-- GCF_000972845.2_L_crocea_2.0_genomic.fna
+|-- Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa
 |-- hisat2_index.sh
 |-- L_crocea.1.ht2
 |-- L_crocea.2.ht2
@@ -439,13 +439,16 @@ You can use pipes and other linux tools to get basic information about these rea
 Now we will be using the program `htseq-count` to count how many reads map to each annotated gene in the genome. To do this, we first need to download the annotation file. It is in GFF format. It can be done using the following command:  
 
 ```bash
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.1_L_crocea_1.0/GCF_000972845.1_L_crocea_1.0_genomic.gff.gz
+wget ftp://ftp.ensembl.org/pub/release-100/gtf/larimichthys_crocea/Larimichthys_crocea.L_crocea_2.0.100.gtf.gz
+gunzip Larimichthys_crocea.L_crocea_2.0.100.gtf.gz
 ```   
 Once downloaded and unziped, then you can count the features using the `htseq-count` program.  
 
 ```bash
-htseq-count -s no -r pos -t gene -i Dbxref -f bam ../mapping/sort_trim_LB2A_SRR1964642.bam GCF_000972845.1_L_crocea_1.0_genomic.gff > LB2A_SRR1964642.counts
+htseq-count -s no -r pos -t gene -i Dbxref -f bam ../mapping/sort_trim_LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.100.gtf > LB2A_SRR1964642.counts
 ```
+`-s no` indicates we're using an unstranded RNA-seq library. `-r pos` tells `htseq-count` that our BAM file is coordinate sorted. `-t 
+
 
 Command discription for the htseq-count will look like :  
 ```bash

@@ -18,10 +18,10 @@ echo `hostname`
 #################################################################
 
 # download it
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.2_L_crocea_2.0/GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
+wget ftp://ftp.ensembl.org/pub/release-100/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
 
 # decompress it
-gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
+gunzip Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
 
 #################################################################
 # Indexing the Genome
@@ -29,4 +29,4 @@ gunzip GCF_000972845.2_L_crocea_2.0_genomic.fna.gz
 
 module load hisat2/2.2.0
 
-hisat2-build -p 16 GCF_000972845.2_L_crocea_2.0_genomic.fna L_crocea
+hisat2-build -p 16 Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa L_crocea
