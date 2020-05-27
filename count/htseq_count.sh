@@ -24,7 +24,7 @@ gunzip *.gz
 #################################################################
 # Generate Counts 
 #################################################################
-module load htseq/0.9.1
+module load htseq/0.11.2
 
 htseq-count -s no -r pos -f bam --additional-attr=gene_name ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.100.gtf > LB2A_SRR1964642.counts
 htseq-count -s no -r pos -f bam --additional-attr=gene_name ../align/LB2A_SRR1964643.bam Larimichthys_crocea.L_crocea_2.0.100.gtf > LB2A_SRR1964643.counts

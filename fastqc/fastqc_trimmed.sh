@@ -21,7 +21,7 @@ if [ ! -d "$dir" ]; then
         mkdir -p $dir
 fi
 
-module load fastqc/0.11.5
+module load fastqc/0.11.7
 fastqc --outdir ./"$dir"/ ../quality_control/LB2A_SRR1964642_trim.fastq.gz -t 8
 fastqc --outdir ./"$dir"/ ../quality_control/LB2A_SRR1964643_trim.fastq.gz -t 8
 fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964644_trim.fastq.gz -t 8
