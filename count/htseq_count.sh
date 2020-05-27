@@ -16,7 +16,7 @@ echo `hostname`
 #################################################################
 # Download gff
 #################################################################
-wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.1_L_crocea_1.0/GCF_000972845.1_L_crocea_1.0_genomic.gff.gz
+wget ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/972/845/GCF_000972845.2_L_crocea_2.0/GCF_000972845.2_L_crocea_2.0_genomic.gff.gz
 
 gunzip *.gz
 
@@ -26,7 +26,7 @@ gunzip *.gz
 #################################################################
 module load htseq/0.9.1
 
-htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/sort_trim_LB2A_SRR1964642.bam GCF_000972845.1_L_crocea_1.0_genomic.gff > LB2A_SRR1964642.counts
-htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/sort_trim_LB2A_SRR1964643.bam GCF_000972845.1_L_crocea_1.0_genomic.gff > LB2A_SRR1964643.counts
-htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/sort_trim_LC2A_SRR1964644.bam GCF_000972845.1_L_crocea_1.0_genomic.gff > LC2A_SRR1964644.counts
-htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/sort_trim_LC2A_SRR1964645.bam GCF_000972845.1_L_crocea_1.0_genomic.gff > LC2A_SRR1964645.counts
+htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/LB2A_SRR1964642.bam GCF_000972845.2_L_crocea_2.0_genomic.gff > LB2A_SRR1964642.counts
+htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/LB2A_SRR1964643.bam GCF_000972845.2_L_crocea_2.0_genomic.gff > LB2A_SRR1964643.counts
+htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/LC2A_SRR1964644.bam GCF_000972845.2_L_crocea_2.0_genomic.gff > LC2A_SRR1964644.counts
+htseq-count -s no -r pos -t gene -i Dbxref -f bam ../align/LC2A_SRR1964645.bam GCF_000972845.2_L_crocea_2.0_genomic.gff > LC2A_SRR1964645.counts
