@@ -79,7 +79,7 @@ We will download data from the control samples (LB2A) and the heat stress treatm
 LB2A : SRR1964642, SRR1964643  
 LC2A : SRR1964644, SRR1964645  
 
-We have provided a script to download the data from the the SRA data using SRA-Toolkit using [this script](/raw_data/fastqc_dump_xanadu.sh). It contains three sections. 
+We have provided a script to download the data from the the SRA data using SRA-Toolkit using [this script](/raw_data/fastq_dump_xanadu.sh). It contains three sections. 
 
 The SLURM header: 
 
@@ -120,7 +120,7 @@ mv SRR1964645.fastq.gz LC2A_SRR1964645.fastq.gz
 
 The full script for slurm scheduler can be found in the `raw_data` folder. Before running it, add your own e-mail address to the `--mail-user` option (or delete the line entirely if you don't want an e-mail notification when the job completes). 
 
-When you're ready, you can execute the script by entering `sbatch fastqc_dump_xanadu.sh` in the terminal. This submits the job to the SLURM scheduler. 
+When you're ready, you can execute the script by entering `sbatch fastq_dump_xanadu.sh` in the terminal. This submits the job to the SLURM scheduler. 
 
 Once the job is completed the folder structure will look like this:  
 
