@@ -7,5 +7,6 @@
 *fastq
 *html
 *.gz
+*.counts
 **/genome
 .DS_Store
