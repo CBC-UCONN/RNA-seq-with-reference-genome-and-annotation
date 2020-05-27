@@ -1,6 +1,12 @@
 **/data
 **/results
 *.out
+*.fa
+*.fna
+*.gff
+*.gtf
+*.bam
+*.ht2
 *.err
 *.zip
 *.gzip
