@@ -16,6 +16,6 @@ echo `hostname`
 #################################################################
 # MULTIQC of trimmed reads 
 #################################################################
-module load MultiQC/1.1
+module load MultiQC/1.8
 
 multiqc --outdir trimmed_multiqc ./after/

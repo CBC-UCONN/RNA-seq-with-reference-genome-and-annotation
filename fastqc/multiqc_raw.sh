@@ -16,6 +16,6 @@ echo `hostname`
 #################################################################
 # MULTIQC of raw reads 
 #################################################################
-module load MultiQC/1.1
+module load MultiQC/1.8
 
 multiqc --outdir raw_multiqc ./before/
