@@ -453,65 +453,43 @@ htseq-count -s no -r pos -f bam --additional-attr=gene_name ../align/LB2A_SRR196
 - `--additional-attr=gene_name` tells the program to include the gene name with the output when it's included in the GTF file. 
 
 
-Command discription for the htseq-count will look like :  
-```bash
-Usage: htseq-count [options] alignment_file gff_file
-Options:
-  -f SAMTYPE, --format=SAMTYPE
-                        type of  data, either 'sam' or 'bam'
-                        (default: sam)
-  -r ORDER, --order=ORDER
-                        'pos' or 'name'. Sorting order of
-                        (default: name). Paired-end sequencing data must be
-                        sorted either by position or by read name, and the
-                        sorting order must be specified. Ignored for single-
-                        end data.
-  -s STRANDED, --stranded=STRANDED
-                        whether the data is from a strand-specific assay.
-                        Specify 'yes', 'no', or 'reverse' (default: yes).
-                        'reverse' means 'yes' with reversed strand
-                        interpretation
-  -t FEATURETYPE, --type=FEATURETYPE
-                        feature type (3rd column in GFF file) to be used, all
-                        features of other type are ignored (default, suitable
-                        for Ensembl GTF files: exon)
-  -i IDATTR, --idattr=IDATTR
-                        GFF attribute to be used as feature ID (default,
-                        suitable for Ensembl GTF files: gene_id)
-``` 
-
 The above command should be repeated for all other BAM files as well. The full script for slurm scheduler can be found in the **count/** folder which is called [htseq_count.sh](/count/htseq_count.sh).  
 
-Once all the bam files have been counted, we will be having the following files in the count directory.  
+Once all the bam files have been counted, the following files will be found in the count directory.  
 ```bash
-counts/
-|-- htseq.sh
-|-- sort_trim_LB2A_SRR1964642.counts
-|-- sort_trim_LB2A_SRR1964643.counts
-|-- sort_trim_LC2A_SRR1964644.counts
-`-- sort_trim_LC2A_SRR1964645.counts
+count/
+├── htseq_count_NNNNN.err
+├── htseq_count_NNNNN.out
+├── htseq_count.sh
+├── Larimichthys_crocea.L_crocea_2.0.100.gtf
+├── LB2A_SRR1964642.counts
+├── LB2A_SRR1964643.counts
+├── LC2A_SRR1964644.counts
+└── LC2A_SRR1964645.counts
 ```  
 
 Let's have a look at the contents of a counts file:
+
 ```bash
-head sort_trim_LB2A_SRR1964642.counts
+head LB2A_SRR1964642.counts 
 ```
 
 which will look like:  
+
 ```
-GeneID:104917625	18
-GeneID:104917626	7
-GeneID:104917627	0
-GeneID:104917628	199
-GeneID:104917629	71
-GeneID:104917630	23
-GeneID:104917631	111
-GeneID:104917632	25
-GeneID:104917634	276
-GeneID:104917635	254
+ENSLCRG00005000002		0
+ENSLCRG00005000003		2922
+ENSLCRG00005000004		0
+ENSLCRG00005000005		28885
+ENSLCRG00005000006		0
+ENSLCRG00005000007	ND1	5923
+ENSLCRG00005000008		0
+ENSLCRG00005000009		0
+ENSLCRG00005000010		0
+ENSLCRG00005000011	ND2	10255
 ``` 
 
-We see the layout is quite straightforward, with two columns separated by a tab. The first column identifies the gene from the eponymous sample and the second column is the number of mRNA strands from the row's gene found in the sample. This setup is perfect for our next task, identifying differentially expressed genes.  
+We see the layout is quite straightforward, with three columns separated by a tab. The first column gives the Ensembl gene ID, the second column is the gene symbol, when present in the GTF, and the third column is the number of mRNA fragments that mapped to the gene. These counts are the raw material for the differential expression analysis in the next section. 
 
 
 ## 7. Pairwise Differential Expression with Counts in R using DESeq2  
