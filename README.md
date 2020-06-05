@@ -447,10 +447,10 @@ Once downloaded and unziped, then you can count the features using the `htseq-co
 ```bash
 htseq-count -s no -r pos -f bam --additional-attr=gene_name ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.100.gtf > LB2A_SRR1964642.counts
 ```
-    - `-s no` indicates we're using an unstranded RNA-seq library. 
-    - `-r pos` tells `htseq-count` that our BAM file is coordinate sorted. 
-    - `-f bam` indicates that our input file is in BAM format. 
-    - `--additional-attr=gene_name` tells the program to include the gene name with the output when it's included in the GTF file. 
+- `-s no` indicates we're using an unstranded RNA-seq library. 
+- `-r pos` tells `htseq-count` that our BAM file is coordinate sorted. 
+- `-f bam` indicates that our input file is in BAM format. 
+- `--additional-attr=gene_name` tells the program to include the gene name with the output when it's included in the GTF file. 
 
 
 Command discription for the htseq-count will look like :  
