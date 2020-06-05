@@ -388,7 +388,7 @@ The full script for the slurm scheduler can be found in the **align/** directory
 
 When `HISAT2` finishes aligning all the reads, it will write a summary which will be captured by SLURM in the file ending `.err`. 
 
-Alignment results for a single sample is shown below: 
+An alignment summary for a single sample is shown below: 
 ```
 25664909 reads; of these:
   25664909 (100.00%) were unpaired; of these:
@@ -445,9 +445,12 @@ gunzip Larimichthys_crocea.L_crocea_2.0.100.gtf.gz
 Once downloaded and unziped, then you can count the features using the `htseq-count` program.  
 
 ```bash
-htseq-count -s no -r pos -t gene -i Dbxref -f bam ../mapping/sort_trim_LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.100.gtf > LB2A_SRR1964642.counts
+htseq-count -s no -r pos -f bam --additional-attr=gene_name ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.100.gtf > LB2A_SRR1964642.counts
 ```
-`-s no` indicates we're using an unstranded RNA-seq library. `-r pos` tells `htseq-count` that our BAM file is coordinate sorted. `-t 
+    - `-s no` indicates we're using an unstranded RNA-seq library. 
+    - `-r pos` tells `htseq-count` that our BAM file is coordinate sorted. 
+    - `-f bam` indicates that our input file is in BAM format. 
+    - `--additional-attr=gene_name` tells the program to include the gene name with the output when it's included in the GTF file. 
 
 
 Command discription for the htseq-count will look like :  
