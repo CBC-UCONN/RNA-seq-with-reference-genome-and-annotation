@@ -543,9 +543,9 @@ sampleCondition <- c("control","control","treated","treated")
 # now create a data frame from these three vectors. 
 sampleTable <- data.frame(
 				sampleName = sampleNames,
-                fileName = sampleFiles,
-                condition = sampleCondition
-                )
+				fileName = sampleFiles,
+				condition = sampleCondition
+				)
 
 # look at the data frame to ensure it is what you expect:
 sampleTable
