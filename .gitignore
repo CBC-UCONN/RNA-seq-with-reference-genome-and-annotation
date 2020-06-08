@@ -1,3 +1,4 @@
+**/DE_analysis
 **/data
 **/results
 *.out
@@ -15,5 +16,7 @@
 *html
 *.gz
 *.counts
+*.counts_2
 **/genome
 .DS_Store
+.Rproj.user
