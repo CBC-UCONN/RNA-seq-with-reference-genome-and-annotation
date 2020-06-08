@@ -542,20 +542,20 @@ sampleCondition <- c("control","control","treated","treated")
 
 # now create a data frame from these three vectors. 
 sampleTable <- data.frame(
-				sampleName = sampleNames,
-				fileName = sampleFiles,
-				condition = sampleCondition
-				)
+		sampleName = sampleNames,
+		fileName = sampleFiles,
+		condition = sampleCondition
+		)
 
 # look at the data frame to ensure it is what you expect:
 sampleTable
 
 # create the DESeq data object
 ddsHTSeq <- DESeqDataSetFromHTSeqCount(
-				sampleTable = sampleTable, 
-				directory = directory, 
-				design = ~ condition
-				)
+		sampleTable = sampleTable, 
+		directory = directory, 
+		design = ~ condition
+		)
 ```
 
 Now we have a "DESeqDataSet" object (you can see this by typing `is(ddsHTSeq)`). By default, the creation of this object will order your treatments alphabetically, and the fold changes will be calculated relative to the first factor. If you would like to choose the first factor (e.g. the control), it's best to set this explicitly in your code. We'll demonstrate that here even though our factor names ("control" and "treatment") already result in the correct order for this data set. 
