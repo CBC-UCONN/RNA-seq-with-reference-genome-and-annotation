@@ -751,7 +751,7 @@ plotCounts(dds, gene=order(-abs(res_shrink$log2FoldChange))[1], intgroup="condit
 Here we've plotted the gene with the largest shrunken log2 fold change. 
 
 
-## Getting gene annotations with BioMaRt
+## Getting gene annotations with `biomaRt`
 
 
 
