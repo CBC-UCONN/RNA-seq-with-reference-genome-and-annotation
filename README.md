@@ -709,6 +709,14 @@ Next we'll plot the the results of a __principal components analysis (PCA)__ of 
 vsd <- vst(dds, blind=FALSE)
 
 plotPCA(vsd, intgroup="condition")
+
+# alternatively, using ggplot
+library(ggplot2)
+
+dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
+
+p <- ggplot(dat,aes(x=PC1,y=PC2,col=group))
+p + geom_point()
 ```
 
 Here we used a _variance stabilized transformation_ of the count data in the PCA, rather than the normalized counts. This is an attempt to deal with the very high range in expression levels (6 orders of magnitude) and the many zeroes, and is similar to, but a bit more robust than simpler approaches, such as simply adding 1 and log2 scaling the normalized counts. 
@@ -754,8 +762,63 @@ Here we've plotted the gene with the largest shrunken log2 fold change.
 ## Getting gene annotations with `biomaRt`
 
 
+BioMart is software that can query a variety of biological databases. `biomaRt` is an R package we can use to build those queries. Here we'll use `biomaRt` to retrieve gene annotations from the Ensembl database. 
+
+```R
+# load biomaRt
+library(biomaRt) 
 
 
+##############################
+# Select a mart and dataset
+##############################
+
+# see a list of "marts" available at host "ensembl.org"
+listMarts(host="ensembl.org")
+
+# create an object for the Ensembl Genes v100 mart
+mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="ensembl.org")
+
+# see a list of datasets within the mart
+	# at the time of writing, there were 203
+listDatasets(mart)
+
+# figure out which dataset is the croaker
+	# be careful using grep like this. verify the match is what you want
+searchDatasets(mart,pattern="lcrocea")
+
+# there's only one match, get the name
+croakerdata <- searchDatasets(mart,pattern="lcrocea")[,1]
+
+
+# create an object for the croaker dataset
+croaker_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", dataset = croakerdata)
+
+#########################
+# Query the mart/dataset
+#########################
+
+# filters, attributes and values
+
+# see a list of all "filters" available for the lcrocea dataset.
+	# at the time of writing, over 300
+listFilters(croaker_mart)
+
+# see a list of all "attributes" available
+	# 129 available at the time of writing
+listAttributes(mart = croaker_mart, page="feature_page")
+
+# we can also search the attributes and filters
+searchAttributes(mart = croaker_mart, pattern = "ensembl_gene_id")
+
+searchFilters(mart = croaker_mart, pattern="ensembl")
+
+# get gene names, when they exists
+ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description"),mart=croaker_mart)
+
+go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=croaker_mart)
+
+```
 
 
 
