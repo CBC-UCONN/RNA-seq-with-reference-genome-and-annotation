@@ -524,9 +524,6 @@ directory <- "../count"
 # ensure the count files are where you think they are
 list.files(directory)
 
-# set a prefix for output file names
-outputPrefix <- "Croaker_DESeq2"
-
 sampleFiles <- list.files(directory, pattern = ".*counts", full.names = TRUE)
 
 ```
@@ -668,28 +665,6 @@ res_shrink[order(-abs(res_shrink$log2FoldChange)),][1:20,]
 
 ```
 
-We can write somes results out to files like this:
-
-```R
-# save data results and normalized reads to csv
-resdata <- merge(
-	as.data.frame(res_shrink), 
-	as.data.frame(counts(dds,normalized =TRUE)), 
-	by = 'row.names', sort = FALSE
-	)
-names(resdata)[1] <- 'gene'
-
-write.csv(resdata, file = paste0(outputPrefix, "-results-with-normalized.csv"))
-
-# send normalized counts to tab delimited file for GSEA, etc.
-write.table(
-	as.data.frame(counts(dds),normalized=T), 
-	file = paste0(outputPrefix, "_normalized_counts.txt"), 
-	sep = '\t'
-	)
-
-```
-
 ### RNA-Seq data visualization
 
 There are several different visualizations we can use to illustrate our results and check to ensure they are robust. 
@@ -820,6 +795,31 @@ go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensem
 
 ```
 
+
+Finally, we can write somes results out to files like this:
+
+```R
+# set a prefix for output file names
+outputPrefix <- "Croaker_DESeq2"
+
+# save data results and normalized reads to csv
+resdata <- merge(
+	as.data.frame(res_shrink), 
+	as.data.frame(counts(dds,normalized =TRUE)), 
+	by = 'row.names', sort = FALSE
+	)
+names(resdata)[1] <- 'gene'
+
+write.csv(resdata, file = paste0(outputPrefix, "-results-with-normalized.csv"))
+
+# send normalized counts to tab delimited file for GSEA, etc.
+write.table(
+	as.data.frame(counts(dds),normalized=T), 
+	file = paste0(outputPrefix, "_normalized_counts.txt"), 
+	sep = '\t'
+	)
+
+```
 
 
 
