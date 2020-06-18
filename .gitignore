@@ -1,6 +1,8 @@
 **/DE_analysis
 **/data
 **/results
+**/raw_multiqc
+**/trimmed_multiqc
 *.out
 *.fa
 *.fna
