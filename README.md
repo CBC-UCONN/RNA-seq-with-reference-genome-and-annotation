@@ -676,7 +676,7 @@ plotMA(res_shrink, ylim=c(-4,4))
 ```
 MA-plots depict the log2 fold change in expression against the mean expression for each gene. In this case we're using the shrunken fold changes, but you can plot the raw ones as well. You don't typically learn much from an MA plot, but it does nicely illustrate that you can achieve significance (red dots) at a much smaller fold change for highly expressed genes. It can also be a first indication that a treatment causes primarily up or down-regulation. 
 
-Next we'll make a _volcano plot_, a plot of the negative log-scaled adjusted p-value against the log2 fold change. 
+Next we'll make a __volcano plot__, a plot of the negative log-scaled adjusted p-value against the log2 fold change. 
 
 ```R
 # negative log-scaled adjusted p-values
