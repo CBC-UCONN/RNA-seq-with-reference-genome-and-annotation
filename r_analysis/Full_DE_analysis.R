@@ -17,7 +17,7 @@ directory <- "../count"
 # ensure the count files are where you think they are
 list.files(directory)
 
-sampleFiles <- list.files(directory, pattern = ".*counts_2", full.names = TRUE)
+sampleFiles <- list.files(directory, pattern = ".*counts")
 
 
 ######################################################
@@ -117,7 +117,9 @@ plot(
 	cex=.2,
 	col=1+(res$padj < 0.05),
 	xlab="raw log2 fold change",
-	ylab="shrunken log2 fold change"
+	ylab="shrunken log2 fold change",
+	xlim=c(-5,5),
+	ylim=c(-5,5)
 	)
 abline(0,1)
 
@@ -133,6 +135,23 @@ res_shrink[order(-abs(res_shrink$log2FoldChange)),][1:20,]
 plotMA(res_shrink, ylim=c(-4,4))
 
 ##############
+
+#Volcano plot
+
+# negative log-scaled adjusted p-values
+log_padj <- -log(res_shrink$padj,10)
+log_padj[log_padj > 100] <- 100
+
+# plot
+plot(x=res_shrink$log2FoldChange,
+     y=log_padj,
+     pch=20,
+     cex=.2,
+     col=(log_padj > 10)+1, # color padj < 0.1 red
+     ylab="negative log-scaled adjusted p-value",
+     xlab="shrunken log2 fold changes")
+
+#############
 
 # PCA plot
 

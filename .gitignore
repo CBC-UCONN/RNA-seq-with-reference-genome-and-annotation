@@ -3,6 +3,7 @@
 **/results
 **/raw_multiqc
 **/trimmed_multiqc
+*.Rproj
 *.out
 *.fa
 *.fna
