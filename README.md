@@ -676,6 +676,24 @@ plotMA(res_shrink, ylim=c(-4,4))
 ```
 MA-plots depict the log2 fold change in expression against the mean expression for each gene. In this case we're using the shrunken fold changes, but you can plot the raw ones as well. You don't typically learn much from an MA plot, but it does nicely illustrate that you can achieve significance (red dots) at a much smaller fold change for highly expressed genes. It can also be a first indication that a treatment causes primarily up or down-regulation. 
 
+Next we'll make a _volcano plot_, a plot of the negative log-scaled adjusted p-value against the log2 fold change. 
+
+```R
+# negative log-scaled adjusted p-values
+log_padj <- -log(res_shrink$padj,10)
+log_padj[log_padj > 100] <- 100
+
+# plot
+plot(x=res_shrink$log2FoldChange,
+     y=log_padj,
+     pch=20,
+     cex=.2,
+     col=(log_padj > 10)+1, # color padj < 0.1 red
+     ylab="negative log-scaled adjusted p-value",
+     xlab="shrunken log2 fold changes")
+```
+
+
 Next we'll plot the the results of a __principal components analysis (PCA)__ of the expression data. For each sample in an RNA-Seq analysis, there are potentially tens of thousands of genes with expression measurements. A PCA attempts to explain the variation in all those genes with a smaller number of _principal components_. In an RNA-Seq analysis, we typically want to see if the PCs reveal any unexpected similarities or differences among samples in their overall expression profiles. A PCA can often quickly reveal outliers, sample labeling problems, or potentially problematic population structure. 
 
 
