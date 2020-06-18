@@ -710,6 +710,7 @@ dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
 
 p <- ggplot(dat,aes(x=PC1,y=PC2,col=group))
 p + geom_point()
+p
 ```
 
 Here we used a _variance stabilized transformation_ of the count data in the PCA, rather than the normalized counts. This is an attempt to deal with the very high range in expression levels (6 orders of magnitude) and the many zeroes, and is similar to, but a bit more robust than simpler approaches, such as simply adding 1 and log2 scaling the normalized counts. 
