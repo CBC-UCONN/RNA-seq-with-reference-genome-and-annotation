@@ -167,6 +167,7 @@ dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
 
 p <- ggplot(dat,aes(x=PC1,y=PC2,col=group))
 p + geom_point()
+p
 
 ##############
 
@@ -253,11 +254,89 @@ searchAttributes(mart = croaker_mart, pattern = "ensembl_gene_id")
 
 searchFilters(mart = croaker_mart, pattern="ensembl")
 
-# get gene names, when they exist
-ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description"),mart=croaker_mart)
+# get gene names and transcript lengths when they exist
+ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","transcript_length"),mart=croaker_mart)
+
+# pick only the longest transcript for each gene ID
+ann <- group_by(ann, ensembl_gene_id) %>% 
+  summarize(.,description=unique(description),transcript_length=max(transcript_length))
 
 # get GO term info
+  # each row is a single gene ID to GO ID mapping, so the table has many more rows than genes in the analysis
 go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=croaker_mart)
+
+# get KEGG info
+# kegg_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","kegg_enzyme"),mart=croaker_mart)
+
+# put results and annotation in the same table
+res_ann <- cbind(res_shrink,ann)
+
+
+
+######################################################
+# Do a couple GO enrichment analyses
+######################################################
+
+# first use 'goseq', a bioconductor package
+  # goseq can automatically pull annotations for some organisms, but not L crocea. 
+  # we need to put together our own input data:
+    # a vector of 1/0 for each gene, indicating DE/not DE
+    # a vector of transcript lengths (the method tries to account for this source of bias)
+    # a table of gene ID to category IDs (in this case GO term IDs) 
+
+# 0/1 vector for DE/not DE
+de <- as.numeric(res$padj < 0.1)
+names(de) <- rownames(res)
+# length of each gene
+len <- ann[[3]]
+
+# first try to account for transcript length bias by calculating the
+# probability of being DE based purely on gene length
+pwf <- nullp(DEgenes=de,bias.data=len)
+
+# use the Wallenius approximation to calculate enrichment p-values
+GO.wall <- goseq(pwf=pwf,gene2cat=go_ann[,c(1,3)])
+
+# do FDR correction on p-values using Benjamini-Hochberg, add to output object
+GO.wall <- cbind(
+  GO.wall,
+  padj_overrepresented=p.adjust(GO.wall$over_represented_pvalue, method="BH"),
+  padj_underrepresented=p.adjust(GO.wall$under_represented_pvalue, method="BH")
+  )
+
+# explore the results
+
+head(GO.wall)
+
+# get genes corresponding to 2nd from top enriched GO term
+  
+g <- go_ann$go_id==GO.wall[2,1]
+gids <- go_ann[g,1]
+
+# inspect results
+res_ann[gids,]
+
+
+# plot l2fc
+ord <- order(res_ann[gids,]$log2FoldChange)
+plot(res_ann[gids,]$log2FoldChange[ord],
+     ylab="l2fc of genes in top enriched GO term",
+     col=(res_ann[gids,]$padj[ord] < 0.1) + 1,
+     pch=20,cex=.5)
+abline(h=0,lwd=2,lty=2,col="gray")
+
+
+########################
+
+# we can also run a similar analysis using the web platform gProfiler
+
+# execute the following code, then copy the all ensembl gene IDs printed to the screen to your clipboard
+cat(rownames(res)[res$padj < 0.1])
+
+# then visit https://biit.cs.ut.ee/gprofiler/gost
+# select Laramichtys crocea as the organism
+# paste the output into the query window and press "Run Query"
+# if you explore the results, you'll see they are very similar. 
 
 ######################################################
 # Save some of the results to a table

@@ -14,8 +14,8 @@ Contents
 7. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
 	1. [Common plots for differential expression analysis](#common-plots-for-differential-expression-analysis)
 	2. [Using DESeq2](#using-deseq2)
-7. [EnTAP: Functional Annotation for Genomes](#8-entap--functional-annotation-for-de-genes)
-8. [Integrating the DE Results with the Annotation Results](#9-integrating-the-de-results-with-the-annotation-results)  
+8. [Getting gene annotations with `biomaRt`](#8-getting-gene-annotations-with-biomart)
+9. [Gene ontology enrichment with `goseq` and `gProfiler`](#9-gene-ontology-enrichment-with-goseq-and-gProfiler)  
 
 
 ## 1. Overview  
@@ -753,7 +753,7 @@ plotCounts(dds, gene=order(-abs(res_shrink$log2FoldChange))[1], intgroup="condit
 Here we've plotted the gene with the largest shrunken log2 fold change. 
 
 
-## Getting gene annotations with `biomaRt`
+## 8. Getting gene annotations with `biomaRt`
 
 
 BioMart is software that can query a variety of biological databases. `biomaRt` is an R package we can use to build those queries. Here we'll use `biomaRt` to retrieve gene annotations from the Ensembl database. 
@@ -807,13 +807,91 @@ searchAttributes(mart = croaker_mart, pattern = "ensembl_gene_id")
 
 searchFilters(mart = croaker_mart, pattern="ensembl")
 
-# get gene names, when they exists
-ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description"),mart=croaker_mart)
+# get gene names and transcript lengths when they exist
+ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","transcript_length"),mart=croaker_mart)
+
+# pick only the longest transcript for each gene ID
+ann <- group_by(ann, ensembl_gene_id) %>% 
+  summarize(.,description=unique(description),transcript_length=max(transcript_length))
 
 go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=croaker_mart)
 
 ```
 
+## 9. Gene ontology enrichment with `goseq` and `gProfiler`
+
+Once we have a set of differentially expressed genes, we want to understand their biological significance. While it can be useful to skim through the list of DE genes, looking for interesting hits, taking a large-scale overview is often also helpful. One way to do that is to look for enrichment of functional categories among the DE genes. There are many, many tools to accomplish that, using several different kinds of functional annotations. Here we'll look at enrichment of [gene ontology](http://geneontology.org/) terms. The Gene Ontology (GO) is a controlled vocabulary describing functional attributes of genes. Above, we retrieved GO terms for the genes we assayed in our experiment. Here we will ask whether they are over- (or under-) represented among our DE genes. 
+
+We're going to use two tools: a Bioconductor package, `goseq` and a web-based program, `gProfiler`. 
+
+`goseq` can pull annotations automatically for some organisms, but not _L. crocea_, so we'll need to put together our input data. We need:
+
+- A vector of 1's and 0's indicating whether each gene is DE or not. 
+- A vector of transcript lengths for each gene (the method tries to account for this source of bias). 
+- A table mapping GO terms to gene IDs (this is the object `go_ann`, created above)
+
+```R
+# 0/1 vector for DE/not DE
+de <- as.numeric(res$padj < 0.1)
+names(de) <- rownames(res)
+
+# length of each gene (already extracted using biomart)
+len <- ann[[3]]
+```
+
+Now we can start the analysis:
+
+```R
+# first try to account for transcript length bias by calculating the
+# probability of being DE based purely on gene length
+pwf <- nullp(DEgenes=de,bias.data=len)
+
+# use the Wallenius approximation to calculate enrichment p-values
+GO.wall <- goseq(pwf=pwf,gene2cat=go_ann[,c(1,3)])
+
+# do FDR correction on p-values using Benjamini-Hochberg, add to output object
+GO.wall <- cbind(
+  GO.wall,
+  padj_overrepresented=p.adjust(GO.wall$over_represented_pvalue, method="BH"),
+  padj_underrepresented=p.adjust(GO.wall$under_represented_pvalue, method="BH")
+  )
+```
+
+And that's it. We now have our output, and we can explore it a bit. Here we'll just pick the one of the top enriched GO terms, pull out all the corresponding genes and plot their log2 fold-changes. 
+
+```R
+# explore the results
+
+head(GO.wall)
+
+# get genes corresponding to 2nd from top enriched GO term
+g <- go_ann$go_id==GO.wall[2,1]
+gids <- go_ann[g,1]
+
+# inspect results
+res_ann[gids,]
+
+# plot l2fc
+ord <- order(res_ann[gids,]$log2FoldChange)
+plot(res_ann[gids,]$log2FoldChange[ord],
+     ylab="l2fc of genes in top enriched GO term",
+     col=(res_ann[gids,]$padj[ord] < 0.1) + 1,
+     pch=20,cex=.5)
+abline(h=0,lwd=2,lty=2,col="gray")
+
+```
+
+We can execute a similar analysis using the web server `gProfiler`. First, get a list of DE gene IDs:
+
+```R
+cat(rownames(res)[res$padj < 0.1])
+```
+Copy the text to your clipboard. Then visit [gProfiler](https://biit.cs.ut.ee/gprofiler/gost). Select _Laramichtys crocea_ as the organism. Paste the output into the query window and press "Run Query". Explore the results. We should see extremely similar enrichment terms. 
+
+A major difference between these analyses is the background set of genes considered. We only give `gProfiler` our list of DE genes. It compares those against the total set of gene annotations in _L. crocea_ (nearly 24,000 genes). `goseq`, by contrast, is using only the set of genes we included in the analysis (only about 14,000). 
+
+
+## Writing out results
 
 Finally, we can write somes results out to files like this:
 
