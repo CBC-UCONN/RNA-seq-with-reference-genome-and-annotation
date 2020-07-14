@@ -166,7 +166,7 @@ library(ggplot2)
 dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
 
 p <- ggplot(dat,aes(x=PC1,y=PC2,col=group))
-p + geom_point()
+p <- p + geom_point()
 p
 
 ##############
