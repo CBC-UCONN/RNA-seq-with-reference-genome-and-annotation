@@ -221,6 +221,10 @@ listMarts(host="ensembl.org")
 # create an object for the Ensembl Genes v100 mart
 mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="ensembl.org")
 
+# occasionally ensembl will have connectivity issues. we can try an alternative function:
+	# select a mirror: 'www', 'uswest', 'useast', 'asia'
+	# mart <- useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", mirror = "useast")
+
 # see a list of datasets within the mart
 	# at the time of writing, there were 203
 listDatasets(mart)
@@ -235,6 +239,11 @@ croakerdata <- searchDatasets(mart,pattern="lcrocea")[,1]
 
 # create an object for the croaker dataset
 croaker_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", dataset = croakerdata)
+
+# if above there were connectivity issues and you used the alternative function then:
+	# select a mirror: 'www', 'uswest', 'useast', 'asia'
+	# croaker_mart <- useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", dataset = croakerdata, mirror = "useast")
+
 
 #########################
 # Query the mart/dataset
