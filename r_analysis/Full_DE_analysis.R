@@ -2,8 +2,11 @@
 	# https://github.com/CBC-UCONN/RNA-seq-with-reference-genome-and-annotation
 
 
-# Load DESeq2 library
+# Load the libraries we'll need in the following code:
 library("DESeq2")
+library("apeglm")
+library("pheatmap")
+library("tidyverse")
 
 
 ######################################################
@@ -124,7 +127,8 @@ plot(
 abline(0,1)
 
 # get the top 20 genes by shrunken log2 fold change
-res_shrink[order(-abs(res_shrink$log2FoldChange)),][1:20,]
+top20 <- order(-abs(res_shrink$log2FoldChange))[1:20]
+res_shrink[top20,]
 
 
 ######################################################
@@ -161,7 +165,6 @@ vsd <- vst(dds, blind=FALSE)
 plotPCA(vsd, intgroup="condition")
 
 # alternatively, using ggplot
-library(ggplot2)
 
 dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
 
@@ -172,9 +175,6 @@ p
 ##############
 
 # heatmap of DE genes
-
-# load pheatmap library (install.packages(pheatmap) if you don't have it.)
-library(pheatmap)
 
 # regularized log transformation of counts
 rld <- rlog(dds, blind=FALSE)
@@ -196,7 +196,8 @@ pheatmap(
 
 # plot counts for individual genes
 
-plotCounts(dds, gene=order(-abs(res_shrink$log2FoldChange))[1], intgroup="condition")
+l2fc_ord <- order(-abs(res_shrink$log2FoldChange))
+plotCounts(dds, gene=l2fc_ord[1], intgroup="condition")
 
 
 
@@ -284,6 +285,10 @@ res_ann <- cbind(res_shrink,ann)
     # a vector of transcript lengths (the method tries to account for this source of bias)
     # a table of gene ID to category IDs (in this case GO term IDs) 
 
+
+# load library `goseq`
+library(goseq)
+
 # 0/1 vector for DE/not DE
 de <- as.numeric(res$padj < 0.1)
 names(de) <- rownames(res)
@@ -308,16 +313,16 @@ GO.wall <- cbind(
 
 head(GO.wall)
 
-# get genes corresponding to 2nd from top enriched GO term
+# identify ensembl gene IDs annotated with to 2nd from top enriched GO term
   
 g <- go_ann$go_id==GO.wall[2,1]
 gids <- go_ann[g,1]
 
-# inspect results
+# inspect DE results for those genes
 res_ann[gids,]
 
 
-# plot l2fc
+# plot log2 fold changes for those genes, sorted
 ord <- order(res_ann[gids,]$log2FoldChange)
 plot(res_ann[gids,]$log2FoldChange[ord],
      ylab="l2fc of genes in top enriched GO term",

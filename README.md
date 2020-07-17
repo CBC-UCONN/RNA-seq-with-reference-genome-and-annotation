@@ -495,13 +495,13 @@ We see the layout is quite straightforward, with two columns separated by a tab.
 
 To identify differentially expressed (DE) genes, we will use the `R` package `DESeq2`, a part of the [Bioconductor](https://www.bioconductor.org/about/) project. After the counts have been generated, typical differential expression analyses can be done easily on laptop computers, so we'll run this part of the analysis locally, instead of on the Xanadu cluster. 
 
-To download the appropriate files to your local computer, you can use the secure copy client, `scp`. Close your Xanadu connection and run the following code:  
+There are a couple ways to download the appropriate files to your local computer. If you're on a mac or linux machine you can use "secure copy", `scp`. Close your Xanadu connection and run the following command in your terminal:  
 
 ```bash
-scp user_name@transfer.cam.uchc.edu:/Path-to-counts/*.counts /path-to-your-local-directory/  
+scp user_name@transfer.cam.uchc.edu:/Path/to/count/*.counts /path/to/your/local/destination/directory  
 ```  
 
-You may also use an FTP client with a graphical user interface such as FileZilla or Cyberduck. `transfer.cam.uchc.edu` is the server used to transfer files of small to moderate size (e.g < 1GB). 
+You may alternatively use an FTP client with a graphical user interface such as FileZilla or Cyberduck. `transfer.cam.uchc.edu` is the server used to transfer files. Regular login nodes cannot be used for file transfer. The transfer server should only be used to move files of small to moderate size (e.g < 1GB). For larger files, please use Globus (see our tutorial on the CBC webpage). 
 
 Typical DE analyses involve both a statistical analysis, which is used to rigorously identify genes of interest and their effect sizes, and data visualization, which is used both as a way of illustrating results and as a form of quality control. Even a quick examination of some of the plots we'll make below can reveal problematic samples or unexpected heterogeneity within treatment groups that could bias results, or to put things in a more positive light, inspire new analyses or interpretations. 
 
@@ -509,13 +509,31 @@ Typical DE analyses involve both a statistical analysis, which is used to rigoro
 
 For this tutorial, we'll assume you're using `RStudio`, but however you launch R, it's always a good idea to ensure you begin a new project with a clean workspace. In `RStudio` we recommend you select "File > New Project" and start a new R project in whatever directory you choose. 
 
+The following steps will use several different R packages. You'll need to make sure they're installed first. 
+
+For differential expression and visualization:
+- `DESeq2` needs to be installed through Bioconductor. See instructions [here](https://bioconductor.org/packages/release/bioc/html/DESeq2.html). 
+- `apeglm` needs to be installed through Bioconductor. Instructions [here](https://bioconductor.org/packages/release/bioc/html/apeglm.html)
+- `pheatmap` can be installed by typing `install.packages("pheatmap")`
+- `ggplot2` is best installed along with the entire set of [tidyverse](https://tidyverse.tidyverse.org/) packages. `install.packages("tidyverse")`
+
+
+For retrieving annotations and doing gene ontology enrichment:
+- `biomaRt` needs to be installed through Bioconductor. Instructions [here](https://bioconductor.org/packages/release/bioc/html/biomaRt.html)
+- `goseq` also needs to be installed through Bioconductor. Instructions [here](https://bioconductor.org/packages/release/bioc/html/goseq.html)
+
+
 ### Beginning the statistical analysis
 
 After you start a new project, you can edit and run the following code:
 
 ```R
-# Load DESeq2 library
+# Load the libraries we'll need in the following code:
 library("DESeq2")
+library("apeglm")
+library("pheatmap")
+library("tidyverse")
+
 
 # create an object with the directory containing your counts:
 	# !!edit this to point to your own count file directory!!
@@ -661,7 +679,8 @@ plot(
 abline(0,1)
 
 # get the top 20 genes by shrunken log2 fold change
-res_shrink[order(-abs(res_shrink$log2FoldChange)),][1:20,]
+top20 <- order(-abs(res_shrink$log2FoldChange))[1:20]
+res_shrink[top20,]
 
 ```
 
@@ -704,7 +723,6 @@ vsd <- vst(dds, blind=FALSE)
 plotPCA(vsd, intgroup="condition")
 
 # alternatively, using ggplot
-library(ggplot2)
 
 dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
 
@@ -721,9 +739,6 @@ You can see that in our case, the first PC, which explains 99% of the variance i
 Next we'll make a heatmap of the top 50 DE genes. 
 
 ```R
-# load pheatmap library (install.packages(pheatmap) if you don't have it.)
-library(pheatmap)
-
 # regularized log transformation of counts
 rld <- rlog(dds, blind=FALSE)
 
@@ -747,7 +762,8 @@ This time we transformed the counts using a slightly different method, the _regu
 Finally, when you've got DE genes, it's always a good idea to at least spot check a few of them to see if the normalized counts seem consistent with expectations. This can reveal a few different problems. First, although `DESeq2` attempts to manage outliers, they can sometimes drive the signal of DE. If you're interested in hanging a bunch of interpretation on a few genes, it's always a good idea to check them. Second, unexpected heterogeneity within treatment groups can also drive signal. This is not the same as having outliers, and it may indicate problems with experimental procedures, or possibly something biologically interesting. Often this will also show up in a PCA or heatmap.
 
 ```R
-plotCounts(dds, gene=order(-abs(res_shrink$log2FoldChange))[1], intgroup="condition")
+l2fc_ord <- order(-abs(res_shrink$log2FoldChange))
+plotCounts(dds, gene=l2fc_ord[1], intgroup="condition")
 ```
 
 Here we've plotted the gene with the largest shrunken log2 fold change. 
@@ -831,6 +847,8 @@ We're going to use two tools: a Bioconductor package, `goseq` and a web-based pr
 - A table mapping GO terms to gene IDs (this is the object `go_ann`, created above)
 
 ```R
+library(goseq)
+
 # 0/1 vector for DE/not DE
 de <- as.numeric(res$padj < 0.1)
 names(de) <- rownames(res)
@@ -864,14 +882,14 @@ And that's it. We now have our output, and we can explore it a bit. Here we'll j
 
 head(GO.wall)
 
-# get genes corresponding to 2nd from top enriched GO term
+# identify ensembl gene IDs annotated with to 2nd from top enriched GO term
 g <- go_ann$go_id==GO.wall[2,1]
 gids <- go_ann[g,1]
 
-# inspect results
+# inspect DE results for those genes
 res_ann[gids,]
 
-# plot l2fc
+# plot log2 fold changes for those genes, sorted
 ord <- order(res_ann[gids,]$log2FoldChange)
 plot(res_ann[gids,]$log2FoldChange[ord],
      ylab="l2fc of genes in top enriched GO term",
