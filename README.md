@@ -544,7 +544,7 @@ directory <- "../count"
 # ensure the count files are where you think they are
 list.files(directory)
 
-sampleFiles <- list.files(directory, pattern = ".*counts", full.names = TRUE)
+sampleFiles <- list.files(directory, pattern = ".*counts")
 
 ```
 
