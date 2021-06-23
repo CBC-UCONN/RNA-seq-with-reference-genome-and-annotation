@@ -440,7 +440,7 @@ Now we will be using the program `htseq-count` to count how many reads map to ea
 
 ```bash
 wget ftp://ftp.ensembl.org/pub/release-104/gtf/larimichthys_crocea/Larimichthys_crocea.L_crocea_2.0.104.gtf.gz
-gunzip Larimichthys_crocea.L_crocea_2.0.100.gtf.gz
+gunzip Larimichthys_crocea.L_crocea_2.0.104.gtf.gz
 ```   
 Once downloaded and unziped, then you can count the features using the `htseq-count` program.  
 
