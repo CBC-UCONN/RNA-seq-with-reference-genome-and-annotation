@@ -18,7 +18,7 @@ echo `hostname`
 #################################################################
 
 # download it
-wget ftp://ftp.ensembl.org/pub/release-100/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-104/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
 
 # decompress it
 gunzip Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
