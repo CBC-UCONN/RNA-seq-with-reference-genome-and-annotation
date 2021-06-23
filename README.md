@@ -311,7 +311,7 @@ HISAT2 is a fast and sensitive aligner for mapping next generation sequencing re
 In order to map the reads to a reference genome we have to do a few things to prepare. First we must download the reference genome! We will download the reference genome (http://useast.ensembl.org/Larimichthys_crocea/Info/Index) from the ENSEMBL database using the `wget` command.  
 
 ```bash
-wget ftp://ftp.ensembl.org/pub/release-100/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
+wget ftp://ftp.ensembl.org/pub/release-104/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
 gunzip Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
 ```
 
@@ -320,7 +320,7 @@ Next, we need to create a genome _index_. What is an index and why is it helpful
 We will use the `hisat2-build` module to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together comprise the index. The command to generate the index looks like this: 
 
 ```bash
-module load hisat2/2.0.5
+module load hisat2/2.2.1
 hisat2-build -p 16 Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa L_crocea
 ```  
 
@@ -353,9 +353,9 @@ To deal with these issues, we'll use a _pipe_ to send the results from `HISAT2` 
 Here's our code for aligning one sample:
 
 ```bash
-hisat2 -p 8 --dta -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
-	samtools view -S -h -u - | \
-	samtools sort -T SRR1964642 - >LB2A_SRR1964642.bam
+hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
+	samtools view -S -h -u -@ 8 - | \
+	samtools sort -@ 8 -T SRR1964642 - >LB2A_SRR1964642.bam
 ```  
 
 The `|` is the pipe. It tells linux to use the output of the command to the left of the pipe as the input for the command to the right. You can chain together many commands using pipes. `samtools view` converts the SAM file produced by `hisat2` to uncompressed BAM. `-S` indicates the input is SAM format. `-h` indicates the SAM header should be written to the output. `-u` indicates that uncompressed BAM format should be written (no need to compress until the end). `-` indicates `samtools` should take input from the pipe. `samtools sort` sorts and compressed the file. `-T` gives a temporary file prefix. 
@@ -363,7 +363,7 @@ The `|` is the pipe. It tells linux to use the output of the command to the left
 Because BAM files are large and we may want to access specific sections quickly, we need to _index_ the bam files, just like we indexed the genome. Here we'll use `samtools` again. As an example:
 
 ```bash
-samtools index LB2A_SRR1964642.bam
+samtools index LB2A_SRR1964642.bam LB2A_SRR1964642.bai
 ```
 
 This creates a `.bam.bai` index file to accompany each BAM file. 
@@ -375,13 +375,13 @@ align/
 ├── align_NNNNNN.out
 ├── align.sh
 ├── LB2A_SRR1964642.bam
-├── LB2A_SRR1964642.bam.bai
+├── LB2A_SRR1964642.bai
 ├── LB2A_SRR1964643.bam
-├── LB2A_SRR1964643.bam.bai
+├── LB2A_SRR1964643.bai
 ├── LC2A_SRR1964644.bam
-├── LC2A_SRR1964644.bam.bai
+├── LC2A_SRR1964644.bai
 ├── LC2A_SRR1964645.bam
-└── LC2A_SRR1964645.bam.bai
+└── LC2A_SRR1964645.bai
 ```  
 
 The full script for the slurm scheduler can be found in the **align/** directory by the name [align.sh](/align/align.sh). When you're ready, navigate there and execute it by entering `sbatch align.sh` on the command-line. 
@@ -439,13 +439,13 @@ You can use pipes and other linux tools to get basic information about these rea
 Now we will be using the program `htseq-count` to count how many reads map to each annotated gene in the genome. To do this, we first need to download the annotation file. It is in GFF format. It can be done using the following command:  
 
 ```bash
-wget ftp://ftp.ensembl.org/pub/release-100/gtf/larimichthys_crocea/Larimichthys_crocea.L_crocea_2.0.100.gtf.gz
+wget ftp://ftp.ensembl.org/pub/release-104/gtf/larimichthys_crocea/Larimichthys_crocea.L_crocea_2.0.104.gtf.gz
 gunzip Larimichthys_crocea.L_crocea_2.0.100.gtf.gz
 ```   
 Once downloaded and unziped, then you can count the features using the `htseq-count` program.  
 
 ```bash
-htseq-count -s no -r pos -f bam ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.100.gtf > LB2A_SRR1964642.counts
+htseq-count -s no -r pos -f bam ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.104.gtf > LB2A_SRR1964642.counts
 ```
 - `-s no` indicates we're using an unstranded RNA-seq library. 
 - `-r pos` tells `htseq-count` that our BAM file is coordinate sorted. 
@@ -460,7 +460,7 @@ count/
 ├── htseq_count_NNNNN.err
 ├── htseq_count_NNNNN.out
 ├── htseq_count.sh
-├── Larimichthys_crocea.L_crocea_2.0.100.gtf
+├── Larimichthys_crocea.L_crocea_2.0.104.gtf
 ├── LB2A_SRR1964642.counts
 ├── LB2A_SRR1964643.counts
 ├── LC2A_SRR1964644.counts
