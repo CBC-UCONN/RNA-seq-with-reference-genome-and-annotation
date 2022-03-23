@@ -12,21 +12,19 @@
 #SBATCH -e %x_%j.err
 
 echo `hostname`
+date
 
 #################################################################
-# Download the Genome
+# Index the Genome
 #################################################################
 
-# download it
-wget ftp://ftp.ensembl.org/pub/release-104/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
-
-# decompress it
-gunzip Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
-
-#################################################################
-# Indexing the Genome
-#################################################################
-
+# load software
 module load hisat2/2.2.0
 
-hisat2-build -p 16 Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa L_crocea
+# input/output directories
+OUTDIR=../genome/hisat2_index
+mkdir -p $OUTDIR
+
+GENOME=../genome/Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.dna.toplevel.fa
+
+hisat2-build -p 16 $GENOME $OUTDIR/Fhet
