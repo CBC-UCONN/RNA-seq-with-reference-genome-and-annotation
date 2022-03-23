@@ -6,6 +6,7 @@
 *.Rproj
 *.out
 *.fa
+*.fai
 *.fna
 *.gff
 *.gtf

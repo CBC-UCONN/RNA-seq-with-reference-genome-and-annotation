@@ -1,7 +1,8 @@
-# Model-based RNA-Seq analysis
-# Differential expression using a reference genome and pre-existing annotation. 
+# Tutorial for differential expression analysis using RNA-seq, a reference genome and pre-existing annotation. 
 
-This repository is a publicly available tutorial for differential expression analysis using RNA-Seq data. All steps have been provided for the UConn CBC Xanadu cluster here with appropriate headers for the Slurm scheduler that can be modified simply to run.  Commands should never be executed on the submit nodes of any HPC machine.  If working on the Xanadu cluster, you should use `sbatch scriptname` after modifying the script for each stage.  Basic editing of all scripts can be performed on the server with tools such as `nano`, `vim`, or `emacs`.  If you are new to Linux, please use [this](https://bioinformatics.uconn.edu/unix-basics) handy guide for the operating system commands.  In this guide, you will be working with common bio Informatic file formats, such as [FASTA](https://en.wikipedia.org/wiki/FASTA_format), [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format), [SAM/BAM](https://en.wikipedia.org/wiki/SAM_(file_format)), and [GFF3/GTF](https://en.wikipedia.org/wiki/General_feature_format). You can learn even more about each file format [here](https://bioinformatics.uconn.edu/resources-and-events/tutorials/file-formats-tutorial/). If you do not have a Xanadu account and are an affiliate of UConn/UCHC, please apply for one **[here](https://bioinformatics.uconn.edu/contact-us/)**.
+This repository is a tutorial for differential expression analysis using RNA-Seq data. The scripts are set up to run on UConn's Xanadu cluster, including Xanadu-specific SLURM headers and software modules. To run it on Xanadu, simply clone this repository and start submitting the scripts by following along with this readme. If you are interested in running it elsewhere, you'll need to install the relevant software and alter or remove the SLURM headers, but otherwise, the tutorial is self-contained and pulls the necessary data from ENSEMBL and NCBI. 
+
+Commands should never be executed on the submit nodes of any HPC machine.  If working on the Xanadu cluster, you should use `sbatch scriptname` after modifying the script for each stage.  Basic editing of all scripts can be performed on the server with tools such as `nano`, `vim`, or `emacs`.  If you are new to Linux, please use [this](https://bioinformatics.uconn.edu/unix-basics) handy guide for the operating system commands.  In this guide, you will be working with common bioinformatic file formats, such as [FASTA](https://en.wikipedia.org/wiki/FASTA_format), [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format), [SAM/BAM](https://en.wikipedia.org/wiki/SAM_(file_format)), and [GFF3/GTF](https://en.wikipedia.org/wiki/General_feature_format). You can learn even more about each file format [here](https://bioinformatics.uconn.edu/resources-and-events/tutorials/file-formats-tutorial/). If you do not have a Xanadu account and are an affiliate of UConn/UCHC, please apply for one **[here](https://bioinformatics.uconn.edu/contact-us/)**.
 
 
 Contents
@@ -20,22 +21,20 @@ Contents
 
 ## 1. Overview  
 
-In this study, transcriptional responses to three environmental stresses were examined in the large yellow croaker (_Larimichthys crocea_): heat stress (LC2A), cold stress (LA2A) and a 21-day fast (LF1A). mRNA was extracted from livers from from fishes from the three treatments and a control (LB2A) and sequenced on an Illumina HiSeq 2000. Sequencing was single-end, and each sequence is 90bp. 
-
-For the purposes of this tutorial, we will compare the control (LB2A) to the heat stress treatment (LC2A). 
+This tutorial uses a subset of [gene expression data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE156460) from [Reid et al. 2016](https://doi.org/10.1126/science.aah4993), a study of evolutionary adaptation to industrial pollutants in the coastal fish *Fundulus heteroclitus*. The study consisted of an experimental exposure of embryonic fish from eight populations to the toxicant PCB-126. Here we will use exposed and control samples from two populations, one adapted to pollution (from the Atlantic Wood Industries superfund site in the Elizabeth River, VA; hereafter ER) and one not adapted (from King's Creek, VA, hereafter KC). Whole RNA was extracted, converted to cDNA and paired-end-sequenced on an Illumina HiSeq 1000. 
 
 #### Cloning the tutorial repository
 
 To work through this tutorial, copy it to your home directory using the `git clone` command:
 
 ```bash
-git clone < git-repository-path.git > 
+git clone git@github.com:CBC-UCONN/RNA-seq-with-reference-genome-and-annotation.git rnaseq-tutorial 
 ```  
 
 Once you clone the repository you can see the following folder structure: 
 
 ```
-Marine/
+rnaseq-tutorial/
 ├── raw_data
 ├── quality_control
 ├── fastqc
