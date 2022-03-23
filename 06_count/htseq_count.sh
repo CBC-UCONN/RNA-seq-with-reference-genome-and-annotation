@@ -2,7 +2,7 @@
 #SBATCH --job-name=htseq_count
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 1
+#SBATCH -c 10
 #SBATCH --mem=20G
 #SBATCH --partition=general
 #SBATCH --qos=general
@@ -12,23 +12,31 @@
 #SBATCH -e %x_%j.err
 
 echo `hostname`
-
-#################################################################
-# Download gff
-#################################################################
-wget ftp://ftp.ensembl.org/pub/release-104/gtf/larimichthys_crocea/Larimichthys_crocea.L_crocea_2.0.104.gtf.gz
-
-gunzip *.gz
-
+date
 
 #################################################################
 # Generate Counts 
 #################################################################
-module load htseq/0.11.2
+module load htseq/0.13.5
+module load parallel/20180122
 
-htseq-count -s no -r pos -f bam ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.104.gtf > LB2A_SRR1964642.counts
-htseq-count -s no -r pos -f bam ../align/LB2A_SRR1964643.bam Larimichthys_crocea.L_crocea_2.0.104.gtf > LB2A_SRR1964643.counts
-htseq-count -s no -r pos -f bam ../align/LC2A_SRR1964644.bam Larimichthys_crocea.L_crocea_2.0.104.gtf > LC2A_SRR1964644.counts
-htseq-count -s no -r pos -f bam ../align/LC2A_SRR1964645.bam Larimichthys_crocea.L_crocea_2.0.104.gtf > LC2A_SRR1964645.counts
+INDIR=../04_align/alignments
+OUTDIR=counts
+mkdir -p $OUTDIR
 
+# accession list
+ACCLIST=../01_raw_data/accessionlist.txt
+
+# gtf formatted annotation file
+GTF=../genome/Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.105.gtf
+
+# run htseq-count on each sample, up to 5 in parallel
+cat $ACCLIST | \
+parallel -j 5 \
+    "htseq-count \
+        -s no \
+        -r pos \
+        -f bam $INDIR/{}.bam \
+        $GTF \
+        > $OUTDIR/{}.counts"
 
