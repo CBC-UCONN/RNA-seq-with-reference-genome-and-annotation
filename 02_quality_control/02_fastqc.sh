@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=fastp_trimming
+#SBATCH --job-name=fastqc
 #SBATCH -n 1
 #SBATCH -N 1
 #SBATCH -c 12
@@ -16,23 +16,14 @@ echo `hostname`
 #################################################################
 # Trimming/QC of reads using fastp
 #################################################################
-module load fastp/0.23.2
+module load fastqc/0.11.7
 module load parallel/20180122
 
 # set input/output directory variables
-INDIR=../01_raw_data
-REPORTDIR=fastp_reports
+INDIR=trimmed_sequences
+REPORTDIR=fastqc_reports
 mkdir -p $REPORTDIR
-TRIMDIR=trimmed_sequences
-mkdir -p $TRIMDIR
 
 # run fastp in parallel, 4 samples at a time
-cat $INDIR/accessionlist.txt | parallel -j 4 \
-fastp \
-	--in1 $INDIR/{}_1.fastq.gz \
-	--in2 $INDIR/{}_2.fastq.gz \
-	--out1 $TRIMDIR/{}_trim_1.fastq.gz \
-	--out2 $TRIMDIR/{}_trim_2.fastq.gz \
-	--json $REPORTDIR/{}_fastp.json \
-	--html $REPORTDIR/{}_fastp.html
-
+cat ../01_raw_data/accessionlist.txt | parallel -j 4 \
+    fastqc --outdir $REPORTDIR $INDIR/{}_trim_{1..2}.fastq.gz
