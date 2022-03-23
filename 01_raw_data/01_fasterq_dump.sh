@@ -1,8 +1,8 @@
 #!/bin/bash
-#SBATCH --job-name=fastq_dump_xanadu
+#SBATCH --job-name=fastqer_dump_xanadu
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 1
+#SBATCH -c 12
 #SBATCH --mem=15G
 #SBATCH --partition=general
 #SBATCH --qos=general
@@ -12,22 +12,26 @@
 #SBATCH -e %x_%j.err
 
 echo `hostname`
+date
+
+# load parallel module
+module load parallel/20180122
 
 #################################################################
 # Download fastq files from SRA 
 #################################################################
-module load sratoolkit/2.8.2
+# The data are a subset (2 populations) from this study:
+    # https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE156460
 
-fastq-dump --gzip SRR1964642
-fastq-dump --gzip SRR1964643
-fastq-dump --gzip SRR1964644
-fastq-dump --gzip SRR1964645
+# you need to have sratoolkit installed
+    # easiest to do this locally
+    # https://github.com/ncbi/sra-tools
+
+cat accessionlist.txt | parallel -j 2 fasterq-dump
 
 #################################################################
-# Rename the files 
+# compress the files 
 #################################################################
-mv SRR1964642.fastq.gz LB2A_SRR1964642.fastq.gz
-mv SRR1964643.fastq.gz LB2A_SRR1964643.fastq.gz
-mv SRR1964644.fastq.gz LC2A_SRR1964644.fastq.gz
-mv SRR1964645.fastq.gz LC2A_SRR1964645.fastq.gz
+
+ls *fastq | parallel -j 12 gzip
 
