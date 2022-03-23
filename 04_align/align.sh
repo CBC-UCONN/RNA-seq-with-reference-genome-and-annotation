@@ -4,44 +4,48 @@
 #SBATCH -N 1
 #SBATCH -c 8
 #SBATCH --mem=20G
-#SBATCH --partition=general
+#SBATCH --partition=xeon
 #SBATCH --qos=general
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=first.last@uconn.edu
-#SBATCH -o %x_%j.out
-#SBATCH -e %x_%j.err
+#SBATCH -o %x_%A_%a.out
+#SBATCH -e %x_%A_%a.err
+#SBATCH --array=[0-18]%5
 
 echo `hostname`
 
 #################################################################
-# Aligning to Genome
+# Align reads to genome
 #################################################################
 module load hisat2/2.2.1
-module load samtools/1.10
+module load samtools/1.12
 
-hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
-	samtools view -@ 8 -S -h -u - | \
-	samtools sort -@ 8 -T SRR1964642 - >LB2A_SRR1964642.bam
+INDIR=../02_quality_control/trimmed_sequences
+OUTDIR=alignments
+mkdir -p $OUTDIR
 
-hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964643_trim.fastq.gz | \
-	samtools view -@ 8 -S -h -u - | \
-	samtools sort -@ 8 -T SRR1964643 - >LB2A_SRR1964643.bam
+# this is an array job. 
+	# one task will be spawned for each sample
+	# for each task, we specify the sample as below
+	# use the task ID to pull a single line, containing a single accession number from the accession list
+	# then construct the file names in the call to hisat2 as below
 
-hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LC2A_SRR1964644_trim.fastq.gz | \
-	samtools view -@ 8 -S -h -u - | \
-	samtools sort -@ 8 -T SRR1964644 - >LC2A_SRR1964644.bam
+ACCLIST=../01_raw_data/accessionlist.txt
 
-hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LC2A_SRR1964645_trim.fastq.gz | \
-	samtools view -@ 8 -S -h -u - | \
-	samtools sort -@ 8 -T SRR1964645 - >LC2A_SRR1964645.bam
+NUM=$(expr ${SLURM_ARRAY_TASK_ID} + 1)
 
+SAMPLE=$(sed -n ${NUM}p $ACCLIST)
+
+INDEX=../genome/hisat2_index/Fhet
+
+# run hisat2
+hisat2 \
+	-p 8 \
+	-x $INDEX \
+	-1 $INDIR/${SAMPLE}_trim_1.fastq.gz \
+	-2 $INDIR/${SAMPLE}_trim_2.fastq.gz | \
+samtools view -@ 8 -S -h -u - | \
+samtools sort -@ 8 -T $SAMPLE - >$OUTDIR/$SAMPLE.bam
 
 # index bam files
-samtools index LB2A_SRR1964642.bam LB2A_SRR1964642.bai
-samtools index LB2A_SRR1964643.bam LB2A_SRR1964643.bai
-samtools index LC2A_SRR1964644.bam LC2A_SRR1964644.bai
-samtools index LC2A_SRR1964645.bam LC2A_SRR1964645.bai
-
-
-
-
+samtools index $OUTDIR/$SAMPLE.bam
