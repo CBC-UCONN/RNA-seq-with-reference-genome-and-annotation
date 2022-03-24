@@ -23,31 +23,40 @@ Contents
 
 This tutorial uses a subset of [gene expression data](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE156460) from [Reid et al. 2016](https://doi.org/10.1126/science.aah4993), a study of evolutionary adaptation to industrial pollutants in the coastal fish *Fundulus heteroclitus*. The study consisted of an experimental exposure of embryonic fish from eight populations to the toxicant PCB-126. Here we will use exposed and control samples from two populations, one adapted to pollution (from the Atlantic Wood Industries superfund site in the Elizabeth River, VA; hereafter ER) and one not adapted (from King's Creek, VA, hereafter KC). Whole RNA was extracted, converted to cDNA and paired-end-sequenced on an Illumina HiSeq 1000. 
 
-#### Cloning the tutorial repository
+#### Setting up the work directory
 
-To work through this tutorial, copy it to your home directory using the `git clone` command:
+This tutorial assumes you will be working on UConn's Xanadu cluster. So before beginning, you should log in to your account there via ssh. If you need an introduction to Xanadu, please see [here](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/). 
+
+To work through this tutorial, copy it to your home directory using the `git clone` command and entering the tutorial directory:
 
 ```bash
 git clone git@github.com:CBC-UCONN/RNA-seq-with-reference-genome-and-annotation.git rnaseq-tutorial 
+cd rnaseq-tutorial
 ```  
 
 Once you clone the repository you can see the following folder structure: 
 
 ```
 rnaseq-tutorial/
-├── raw_data
-├── quality_control
-├── fastqc
-├── index
-├── align
-├── count
-└── entap
+├── 01_raw_data
+├── 02_quality_control
+├── 03_index
+├── 04_align
+├── 05_align_qc
+├── 06_count
+├── 07_stringtie
+├── 08_kallisto
+├── images
+├── LICENSE
+├── r_analysis
+├── README.md
+└── setup.sh
 ```
 
 #### SLURM scripts
-The scripts provided are configured to use SLURM, the workload managing software used on the Xanadu cluster. Such software is necessary to manage and equitably distribute resources on large computing clusters with many users. 
+The scripts provided are configured to use `SLURM`, the workload management software on the Xanadu cluster. Such software is necessary to manage and equitably distribute resources on large computing clusters with many users. You will run each script by submitting it to slurm using the command `sbatch`. For example, the first script will be submitted via the command `sbatch 01_fasterq_dump.sh`. 
 
-Each script contains a header section which specifies computational resources (processors, memory) needed to run the job. SLURM then puts the job in a queue and the runs it when the resources become available. The header section looks like this:
+Each script contains a header section that specifies computational resources (how many processors and what type, and memory) needed to run the job. SLURM then puts the job in a queue and then runs it when the resources become available. The header section looks like this:
 
 ```
 #!/bin/bash
@@ -64,30 +73,53 @@ Each script contains a header section which specifies computational resources (p
 #SBATCH -e %x_%j.err
 ```
 
-Before beginning, you need to understand a few aspects of the Xanadu server. When first logging into Xanadu from your local terminal, you will be connected to a **submit node**. The submit node is meant to serve as an **interface** for users, and under no circumstances should you use it to do serious computation. If you do, the system administrators may kill your job and send you a mean e-mail about it. This may cause you to lose work, and worse, feel badly about yourself. On the submit node you may manage and inspect files, write and edit scripts, and do other very light duty work. To analyze data, you need to request access to one or more **compute nodes** through SLURM. This tutorial will not teach you how to configure the SLURM header. Therefore, before moving on, it would be helpful to read and master the topics covered in the [Xanadu tutorial](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/) and our [guide to resource requests](https://github.com/CBC-UCONN/CBC_Docs/wiki/Requesting-resource-allocations-in-SLURM).
+Before beginning, you need to understand a few aspects of the Xanadu server. When first logging into Xanadu from your local terminal, you will be connected to a **submit node**. The submit node is meant to serve as an **interface** for users, and under no circumstances should you use it to do serious computation. If you do, the system administrators may kill your job and send you a mean e-mail about it. This may cause you to lose work, and worse, feel badly about yourself. On the submit node you may manage and inspect files, write and edit scripts, and do other very light duty work. To analyze data, you need to request access to one or more **compute nodes** through SLURM. This tutorial will not teach you how to configure the SLURM header. Therefore, before moving on, it would be helpful to learn about the topics covered in the [Xanadu tutorial](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/xanadu/) and our [guide to resource requests](https://github.com/CBC-UCONN/CBC_Docs/wiki/Requesting-resource-allocations-in-SLURM).
 
 
-## 2. Accessing the Data using SRA-Toolkit    
+## 2. Accessing the expression data using SRA-Toolkit and the genome via ENSEMBL
 
-Before we can get started, we need to get the data we're going to analyze. This dataset has been deposited in the [Sequence Read Archive (SRA)](https://www.ncbi.nlm.nih.gov/sra) at NCBI, a comprehensive collection of sequenced genetic data submitted by researchers. The beauty of the SRA is the ease with which genetic data becomes accessible to any scientist with an internet connection. Sets of sequences (usually all the sequences from a given sample within an experiment) in the SRA have a unique identifier. The set may be downloaded using a software module called the `sratoolkit`. There are a variety of commands in the `sratoolkit`, which I invite you to investigate for yourself at [here](https://www.ncbi.nlm.nih.gov/books/NBK158900/).  
+Before we can get started, we need to get the data we're going to analyze. The sequence dataset from the experiment detailed above has been deposited in the [Sequence Read Archive (SRA)](https://www.ncbi.nlm.nih.gov/sra) at NCBI, a comprehensive collection of sequenced genetic data submitted by researchers. Sets of sequences (usually all the sequences from a given sample within an experiment) in the SRA are given a unique accession number. A set may be downloaded using `sratoolkit`. There are a variety of commands in `sratoolkit`, which you can read more about [here](https://www.ncbi.nlm.nih.gov/books/NBK158900/).  
 
-An overview of the project data can be viewed [here](https://www.ncbi.nlm.nih.gov/bioproject/PRJNA280841/). 
+An overview of the project data can be viewed [here](https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE156460). 
 
-We will download data from the control samples (LB2A) and the heat stress treatment (LC2A). The SRA accessions are as follows:
+We are going to download 19 samples corresponding to two toxicant exposure treatments (exposed and control) from one tolerant and one sensitive killifish population (ER and KC). 
 
-LB2A : SRR1964642, SRR1964643  
-LC2A : SRR1964644, SRR1964645  
+| Accession   | Dose | Population      |
+| ----------- | -    | --------------- |
+| SRR12475447 | 0    | Elizabeth River |
+| SRR12475448 | 0    | Elizabeth River |
+| SRR12475449 | 0    | Elizabeth River |
+| SRR12475450 | 0    | Elizabeth River |
+| SRR12475451 | 200  | Elizabeth River |
+| SRR12475452 | 200  | Elizabeth River |
+| SRR12475453 | 200  | Elizabeth River |
+| SRR12475454 | 2000 | Elizabeth River |
+| SRR12475455 | 2000 | Elizabeth River |
+| SRR12475456 | 2000 | Elizabeth River |
+| SRR12475468 | 0    | King's Creek    |
+| SRR12475469 | 0    | King's Creek    |
+| SRR12475470 | 0    | King's Creek    |
+| SRR12475471 | 0    | King's Creek    |
+| SRR12475472 | 0    | King's Creek    |
+| SRR12475473 | 200  | King's Creek    |
+| SRR12475474 | 200  | King's Creek    |
+| SRR12475475 | 200  | King's Creek    |
+| SRR12475476 | 200  | King's Creek    |
 
-We have provided a script to download the data from the the SRA data using SRA-Toolkit using [this script](/raw_data/fastq_dump_xanadu.sh). It contains three sections. 
+Enter the directory `01_raw_data` (`cd 01_raw_data`). There are four files here. two scripts, [01_fasterq_dump.sh](/01_raw_data/01_fasterq_dump.sh) and [02_get_genome.sh](/01_raw_data/02_get_genome_.sh), a list of accession numbers, [accessionlist.txt](/01_raw_data/accessionlist.txt), and a CSV table of metadata [metadata.txt](/01_raw_data/metadata.txt). 
 
-The SLURM header: 
+### Downloading sequence data from the SRA
+
+The first script downloads the data from the the SRA using `sratoolkit`. It contains two sections: a SLURM header and the block of code to be executed. 
+
+The SLURM header, requesting 12 cpus and 15G of memory: 
 
 ```bash
 #!/bin/bash
-#SBATCH --job-name=fastq_dump_xanadu
+#SBATCH --job-name=fastqer_dump_xanadu
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 1
+#SBATCH -c 12
 #SBATCH --mem=15G
 #SBATCH --partition=general
 #SBATCH --qos=general
@@ -97,46 +129,41 @@ The SLURM header:
 #SBATCH -e %x_%j.err
 ```
 
-The download commands:
+The code (leaving out some comment lines):
 
 ```
-module load sratoolkit/2.8.1 
+module load parallel/20180122
+module load sratoolkit/2.11.3
 
-fastq-dump --gzip SRR1964642
-fastq-dump --gzip SRR1964643
-fastq-dump --gzip SRR1964644
-fastq-dump --gzip SRR1964645
+cat accessionlist.txt | parallel -j 2 fasterq-dump
+
+ls *fastq | parallel -j 12 gzip
 ```
 
-The line `module load sratoolkit/2.8.1` loads the `sratoolkit` so we can use it. Once downloaded, we rename the samples:  
+The first two lines load the software we use in the script. We're using 2 pieces of software here. `sratoolkit` and `parallel`. The `module load` commands make specific versions of each available on Xanadu. If you're working elsewhere, these will have to be installed and on your PATH. 
+
+The second line downloads the data. There are a couple of things happening here. First, we're using a pipe (`|`). In bash scripting, the pipe is used to take the output of the command to the left of the pipe and send it to the command to the right of the pipe to be used as input. So we have two commands: `cat accessionlist.txt` and `parallel -j 2 fasterq-dump`. The first writes out our list of accessions. The second takes each entry on the list and runs `fasterq-dump` on it in parallel, downloading the sequence data. `-j 2` means download 2 accessions at a time. 
+
+We will use this idiom repeatedly in the tutorial to run repetitive code in parallel. A useful tip with parallel, especially as commands get more complex: you can see the commands that would be executed without actually running them by adding the flag `--dryrun`. Try it:
+
+```
+cat accessionlist.txt | parallel --dryrun -j 2 fasterq-dump
+```
+
+In the third line, we use parallel again to gzip compress the fastq files. It's always a good idea to keep sequence data gzip compressed. It saves space, and pretty much every piece of software will read recognize and read gzipped files without issue. 
+
+We're almost ready to run the script. Before running it, add your own e-mail address to the `--mail-user` option to receive notifications when the job starts, finishes, or ends with an error (or delete the line entirely if you don't want e-mails). 
+
+When you're ready, you can execute the script by entering `sbatch 01_fasterq_dump.sh` in the terminal. This submits the job to the SLURM scheduler. It should take an hour or two to download all the data. 
+
+Once the job is completed, you should see 57 sequence files in this directory with the suffix `fastq.gz`. Check this by typing `ls *fastq.gz | wc -l` on the command line. There should also be 2 log files produced by slurm with the suffixes `.err` and `.out`. These files will record messages and/or errors produced during execution of the script and should always be examined. 
+
+There are three sequence files for each of our 19 samples. `_1.fastq.gz`, `_2.fastq.gz` and `fastq.gz`. These data were quality trimmed before being uploaded to the SRA, so even though we have paired-end sequence data, there are some single sequences left as a result. We're going to ignore the single end sequences going forward and only use the paired files. 
+
+Lets have a look at at the contents of one of the fastq files:  
 
 ```bash
-mv SRR1964642.fastq.gz LB2A_SRR1964642.fastq.gz
-mv SRR1964643.fastq.gz LB2A_SRR1964643.fastq.gz
-mv SRR1964644.fastq.gz LC2A_SRR1964644.fastq.gz
-mv SRR1964645.fastq.gz LC2A_SRR1964645.fastq.gz
-```  
-
-The full script for slurm scheduler can be found in the `raw_data` folder. Before running it, add your own e-mail address to the `--mail-user` option (or delete the line entirely if you don't want an e-mail notification when the job completes). 
-
-When you're ready, you can execute the script by entering `sbatch fastq_dump_xanadu.sh` in the terminal. This submits the job to the SLURM scheduler. 
-
-Once the job is completed the folder structure will look like this:  
-
-```
-raw_data/
-|-- fastq_dump_xanadu_NNNN.err
-|-- fastq_dump_xanadu_NNNN.out
-|-- LB2A_SRR1964642.fastq.gz
-|-- LB2A_SRR1964643.fastq.gz
-|-- LC2A_SRR1964644.fastq.gz
-`-- LC2A_SRR1964645.fastq.gz
-```   
-
-The sequence files are in fastq format and compressed using gzip (indicated by the `.gz`). It's good practice to keep sequence files compressed. Most bioinformatics programs can read them directly without needing to decompress them first, and it doesn't get in the way of inspecting them either. The `.out` and `.err` files are output produced by SLURM that you can use to troubleshoot if things go wrong. Lets have a look at at the contents of one of the fastq files:  
-
-```bash
-zcat LB2A_SRR1964642.fastq.gz | head -n 12
+zcat SRR12475447_1.fastq.gz | head -n 12
 
 @SRR1964642.1 FCC355RACXX:2:1101:1476:2162 length=90
 CAACATCTCAGTAGAAGGCGGCGCCTTCACCTTCGACGTGGGGAATCGCTTCAACCTCACGGGGGCTTTCCTCTACACGTCCTGTCCGGA
@@ -152,9 +179,39 @@ GGACAACGCCTGGACTCTGGTTGGTATTGTCTCCTGGGGAAGCAGCCGTTGCTCCACCTCCACTCCTGGTGTCTATGCCC
 CCCFFFFFHHFFHJJJIIIJHHJJHHJJIJIIIJEHJIJDIJJIIJJIGIIIIJGHHHHFFFFFEEEEECDDDDEDEDDDDDDDADDDDD
 ```  
 
-Each sequence record has four lines. The first is the sequence name, beginning with `@`. The second is the nucleotide sequence. The third is a comment line, beginning with `+`, and which here only contains the sequence name again (it is often empty). The fourth are [phred-scaled base quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), encoded by [ASCII characters](https://drive5.com/usearch/manual/quality_score.html). Follow the links to learn more, but in short, the quality scores give the probability a called base is incorrect. 
+This writes out three sequence records. Each sequence record has four lines. The first is the sequence name, beginning with `@`. The second is the nucleotide sequence. The third is a comment line, beginning with `+`, and which here only contains the sequence name again (it is often empty). The fourth are [phred-scaled base quality scores](https://en.wikipedia.org/wiki/Phred_quality_score), encoded by [ASCII characters](https://drive5.com/usearch/manual/quality_score.html). Follow the links to learn more, but in short, the quality scores give the probability a called base is incorrect. 
 
-## 3. Quality Control Using `Trimmomatic`  
+### Downloading the genome, transcripts and annotation from ENSEMBL
+
+The second script in this directory downloads the genomic resources we need for this analysis: ([02_get_genome.sh](/01_raw_data/02_get_genome.sh)). We're going to use data from the [ENSEMBL](https://www.ensembl.org/index.html) database. ENSEMBL is a resource for comparative genomics. It contains genomes and both structural and functional annotations for a large number of vertebrate genomes. Links to *Fundulus heteroclitus* data can be found [here](https://useast.ensembl.org/Fundulus_heteroclitus/Info/Index). 
+
+This script is pretty simple, but it introduces another idiom that will be used repeated in following scripts. At the beginning of the script we set a "shell variable" to be used later in the script. Many scripts must repeatedly refer to files or directories with long names that make the code harder to read. We often replace these with shorter variables. This has two benefits: first, the script becomes easier to read and second if you need to edit a file name or path, you only need to change it in one place. 
+
+In this case, we specify a path to a directory we're going to store all of our genomic resources in and then create the directory:
+
+```bash
+GENOMEDIR=../genome
+mkdir -p $GENOMEDIR
+```
+
+`../genome`. Is a relative path. The `..` means go "up" one level in the directory tree. Try `ls ..` to see what this means. 
+
+Next we download each of the necessary files using `wget` and decompress them using `gunzip`. Yes, we did say it's better to keep sequence files compressed, but many pieces of software expect genome and transcript sequences to be in plain text. 
+
+Finally, we move all the files to the directory we just created:
+
+```bash
+mv Fundulus* $GENOMEDIR
+```
+
+Finally, `mv` moves files. The glob (`*`) is a wild card that matches any text, so any file that begins with "Fundulus" will be moved. `$GENOMEDIR` is how we access the shell variable we set at the top of the script. Note that `$` is necessary when accessing the variable, but not when setting it. 
+
+
+## 3. Quality Control 
+
+
+
+
 
 `Trimmomatic` is commonly used to trim low quality and adapter contaminated sequences. 
 
