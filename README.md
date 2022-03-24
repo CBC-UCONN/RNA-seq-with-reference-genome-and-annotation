@@ -6,12 +6,12 @@ Commands should never be executed on the submit nodes of any HPC machine.  If wo
 
 
 Contents
-1. [Overview](#1-overview)
-2. [Accessing the Data](#2-Accessing-the-expression-data-using-SRA-Toolkit-and-the-genome-via-ENSEMBL)  
-3. [Quality control using Trimmomatic](#3-quality-control-using-Trimmomatic)
-4. [FASTQC Before and After Quality Control](#4-fastqc-before-and-after-quality-control)
-5. [Aligning Reads to a Genome using hisat2](#5-aligning-reads-to-a-genome-using-hisat2)
-6. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
+1. [ Overview ](#1-overview)
+2. [ Accessing the Data ](#2-Accessing-the-expression-data-using-SRA-Toolkit-and-the-genome-via-ENSEMBL)  
+3. [ Quality control ](#3-quality-control)
+4. [Aligning Reads to a Genome using hisat2](#4-aligning-reads-to-a-genome-using-hisat2)
+
+5. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
 7. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
 	1. [Common plots for differential expression analysis](#common-plots-for-differential-expression-analysis)
 	2. [Using DESeq2](#using-deseq2)
@@ -106,7 +106,7 @@ We are going to download 19 samples corresponding to two toxicant exposure treat
 | SRR12475475 | 200  | King's Creek    |
 | SRR12475476 | 200  | King's Creek    |
 
-Enter the directory `01_raw_data` (`cd 01_raw_data`). There are four files here. two scripts, [01_fasterq_dump.sh](/01_raw_data/01_fasterq_dump.sh) and [02_get_genome.sh](/01_raw_data/02_get_genome_.sh), a list of accession numbers, [accessionlist.txt](/01_raw_data/accessionlist.txt), and a CSV table of metadata [metadata.txt](/01_raw_data/metadata.txt). 
+Enter the directory `01_raw_data` by typing `cd 01_raw_data`. There are four files here: two scripts, [01_fasterq_dump.sh](/01_raw_data/01_fasterq_dump.sh) and [02_get_genome.sh](/01_raw_data/02_get_genome.sh), a list of accession numbers, [accessionlist.txt](/01_raw_data/accessionlist.txt), and a CSV table of metadata [metadata.txt](/01_raw_data/metadata.txt). 
 
 ### Downloading sequence data from the SRA
 
@@ -158,11 +158,11 @@ When you're ready, you can execute the script by entering `sbatch 01_fasterq_dum
 
 Once the job is completed, you should see 57 sequence files in this directory with the suffix `fastq.gz`. Check this by typing `ls *fastq.gz | wc -l` on the command line. There should also be 2 log files produced by slurm with the suffixes `.err` and `.out`. These files will record messages and/or errors produced during execution of the script and should always be examined. 
 
-There are three sequence files for each of our 19 samples. `_1.fastq.gz`, `_2.fastq.gz` and `fastq.gz`. These data were quality trimmed before being uploaded to the SRA, so even though we have paired-end sequence data, there are some single sequences left as a result. We're going to ignore the single end sequences going forward and only use the paired files. 
+There are three sequence files for each of our 19 samples. `_1.fastq.gz`, `_2.fastq.gz` and `fastq.gz`. These data were quality trimmed before being uploaded to the SRA, so even though we have paired-end sequence data, there are some single sequences left as a result. We're going to ignore the single end sequences going forward and only use the paired files ("_1.fastq.gz" and "_2.fastq.gz"). 
 
 Lets have a look at at the contents of one of the fastq files:  
 
-```bash
+```
 zcat SRR12475447_1.fastq.gz | head -n 12
 
 @SRR1964642.1 FCC355RACXX:2:1101:1476:2162 length=90
@@ -209,157 +209,69 @@ Finally, `mv` moves files. The glob (`*`) is a wild card that matches any text, 
 
 ## 3. Quality Control 
 
+Here we use `fastp` to trim and produce HTML-formatted reports on characteristics of the sequences for each sample. `fastp` will trim low quality sequence and any residual adapter sequences (mostly a result of "read-through"). We'll also run `fastqc` which reports on a slightly different set of characteristics, and `multiqc` to aggregate the reports across samples. These reports will allow you to make a quick assessment of the overall quality of your sequences. 
 
+Enter the directory `02_quality_control`. There are three scripts to run. The first script runs fastp ([01_fastp_trim.sh](/02_quality_control/01_fastp_trim.sh)). 
 
-
-
-`Trimmomatic` is commonly used to trim low quality and adapter contaminated sequences. 
-
-Our usage looks like this for a single sample:
+After the SLURM header we specify a few variables and create some directories to hold the results:
 
 ```bash
-module load Trimmomatic/0.39
-
-java -jar $Trimmomatic SE \
-	-threads 12 \
-	../raw_data/LB2A_SRR1964642.fastq.gz \
-	LB2A_SRR1964642_trim.fastq.gz \
-	ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 \
-	SLIDINGWINDOW:4:20 \
-	MINLEN:45
+INDIR=../01_raw_data
+REPORTDIR=fastp_reports
+mkdir -p $REPORTDIR
+TRIMDIR=trimmed_sequences
+mkdir -p $TRIMDIR
 ```
 
-We call `SE` for single-end mode, we request 12 processor threads be used, and we specify the input and output file names. The `ILLUMINACLIP:TruSeq3-SE.fa:2:30:10` command searches for adapter sequence, so we provide a fasta file containing the adapters used in the library preparation, and the numbers control the parameters of adapter matching (see the [manual](http://www.usadellab.org/cms/?page=trimmomatic) for more details). `SLIDINGWINDOW:4:20` scans through the read, cutting the read when the average base quality in a 4 base window drops below 20. We linked to an explanation of phred-scaled quality scores above, but for reference, scores of 10 and 20 correspond to base call error probabilities of 0.1 and 0.01, respectively. `MINLEN:45` causes reads to be dropped if they have been trimmed to less than 45bp.[Here](https://www.frontiersin.org/articles/10.3389/fgene.2014.00013/full) is a useful paper on setting trimming parameters for RNA-seq. 
-
-The full script for slurm scheduler is called [fastq_trimming.sh](/quality_control/fastq_trimming.sh) which can be found in the **quality_control/** folder. Navigate there and run the script by enteriing `sbatch fastq_trimming.sh` on the command-line. 
-
-Following the `trimmomatic` run, the resulting file structure will look as follows:  
+Then we use our list of accessions and `parallel` to run `fastp` on all our samples:
 
 ```bash
-quality_control/
-├── fastq_trimming_NNNNN.err
-├── fastq_trimming_NNNNN.out
-├── fastq_trimming.sh
-├── LB2A_SRR1964642_trim.fastq.gz
-├── LB2A_SRR1964643.trim.fastq.gz
-├── LC2A_SRR1964644.trim.fastq.gz
-├── LC2A_SRR1964645.trim.fastq.gz
-└── TruSeq3-SE.fa
-```  
-
-Examine the .out file generated during the run. Summaries of how many reads were retained for each file were written there. Here's one example:
-
-```
-TrimmomaticSE: Started with arguments:
- -threads 12 ../raw_data/LB2A_SRR1964642.fastq.gz LB2A_SRR1964642_trim.fastq.gz ILLUMINACLIP:TruSeq3-SE.fa:2:30:10 SLIDINGWINDOW:4:20 MINLEN:45
-Using Long Clipping Sequence: 'AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGTA'
-Using Long Clipping Sequence: 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
-ILLUMINACLIP: Using 0 prefix pairs, 2 forward/reverse sequences, 0 forward only sequences, 0 reverse only sequences
-Quality encoding detected as phred33
-Input Reads: 26424138 Surviving: 25664909 (97.13%) Dropped: 759229 (2.87%)
-TrimmomaticSE: Completed successfully
-
-```  
-
-## 4. `FASTQC` Before and After Quality Control
-
-It is helpful to see how the quality of the data has changed after using `Trimmomatic`. To do this, we will be using the command-line versions of `fastqc` and `MultiQC`. These two programs create visual reports of the average quality of our reads.  
-
-```bash
-dir="before"
-
-module load fastqc/0.11.5
-fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964642.fastq.gz
-fastqc --outdir ./"$dir"/ ../raw_data/LB2A_SRR1964643.fastq.gz
-fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964644.fastq.gz
-fastqc --outdir ./"$dir"/ ../raw_data/LC2A_SRR1964645.fastq.gz
-```  
-
-The full script for slurm scheduler is called [fastqc_raw.sh](/fastqc/fastqc_raw.sh) and is located in the /fastqc folder.  
-
-The same command can be run on the fastq files after the trimming using fastqc program, and the comand will look like this:
-```bash
-dir="after"
-
-module load fastqc/0.11.5
-fastqc --outdir ./"$dir"/ ../quality_control/LB2A_SRR1964642.trim.fastq.gz -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/LB2A_SRR1964643.trim.fastq.gz -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964644.trim.fastq.gz -t 8
-fastqc --outdir ./"$dir"/ ../quality_control/LC2A_SRR1964645.trim.fastq.gz -t 8
-```  
-
-The full script for slurm scheduler is called [fastqc_trimmed.sh](/fastqc/fastqc_trimmed.sh) which is located in /fastqc folder.  
- 
-This will produce html files with the quality reports. The file strucutre inside the folder **fastqc/** will look like this:  
-
-```
-fastqc/
-├── after
-│   ├── trimmed_LB2A_SRR1964642_fastqc.html
-│   ├── trimmed_LB2A_SRR1964642_fastqc.zip
-│   ├── trimmed_LB2A_SRR1964643_fastqc.html
-│   ├── trimmed_LB2A_SRR1964643_fastqc.zip
-│   ├── trimmed_LC2A_SRR1964644_fastqc.html
-│   ├── trimmed_LC2A_SRR1964644_fastqc.zip
-│   ├── trimmed_LC2A_SRR1964645_fastqc.html
-│   └── trimmed_LC2A_SRR1964645_fastqc.zip
-├── before
-│   ├── LB2A_SRR1964642_fastqc.html
-│   ├── LB2A_SRR1964642_fastqc.zip
-│   ├── LB2A_SRR1964643_fastqc.html
-│   ├── LB2A_SRR1964643_fastqc.zip
-│   ├── LC2A_SRR1964644_fastqc.html
-│   ├── LC2A_SRR1964644_fastqc.zip
-│   ├── LC2A_SRR1964645_fastqc.html
-│   └── LC2A_SRR1964645_fastqc.zip
-```  
-
-To view the html files you need to download them to your laptop and open them in a web browser. You can use a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu** and the unix utility `scp`. Copy the files as shown below, or use an FTP client with a graphical user interface such as FileZilla or Cyberduck: 
-
-```bash
-scp user-name@transfer.cam.uchc.edu:~/path/to/cloned/git/repository/fastqc/before/*.html .
+cat $INDIR/accessionlist.txt | parallel -j 4 \
+fastp \
+	--in1 $INDIR/{}_1.fastq.gz \
+	--in2 $INDIR/{}_2.fastq.gz \
+	--out1 $TRIMDIR/{}_trim_1.fastq.gz \
+	--out2 $TRIMDIR/{}_trim_2.fastq.gz \
+	--json $REPORTDIR/{}_fastp.json \
+	--html $REPORTDIR/{}_fastp.html
 ```
 
-The syntax is `scp x y`, meaning copy files `x` to location `y`. Do not forget the '**.**' at the end of the above code; which means to download the files to the current working directory in your computer. You can likewise download the **HTML** files for the trimmed reads. 
- 
-Let's have a look at the output from `fastqc`. When loading the fastqc file, you will be greeted with this screen  
-![](/images/fastqc1.png)  
+This parallel run is a little more complicated. To organize the code, here we use `\` to break up a single command over multiple lines. Parallel treats `{}` as a placeholder for the accessions it is reading from the pipe, and we construct the relevant filenames using it. Try adding `--dryrun` and running these lines to see the actual commands `parallel` is executing. 
 
-There are some basic statistics which are all pretty self-explanatory. Notice that none of our sequence libraries fail the quality report! It would be concerning if we had even one because this report is from our trimmed sequence! The same thinking applies to our sequence length. Should the minimum of the sequence length be below 45, we would know that Trimmomatic had not run properly. Let's look at the next index in the file:  
+`fastp` will trim the sequences and write new fastq.gz files to the `trimmed_sequences` directory and put the reports in `fastp_reports`. 
 
-![](/images/fastqc2.png)  
+The second script ([02_fastqc.sh](/02_quality_control/02_fastqc.sh)) runs `fastqc` on the trimmed sequences, again using parallel:
 
-This screen is simply a box-and-whiskers plot of our quality scores per base pair. Note that there is a large variance and lower mean scores (but still about in our desired range) for base pairs 1-5 and that sequence quality declines toward the 3' end of the read.  
-
-![](/images/fastqc3.png)  
-
-This figure shows the distribution of mean read qualities. You can see we have a peak at about 38, which corresponds to a per base error probability of 0.00016. 
-
-The last panel at which we are going to look is the "Overrepresented Sequences" panel:  
-![](images/fastqc4.png)  
-
-This is simply a list of sequences which appear disproportionately in our reads file. FastQC checks these against common adapter sequences and will flag them as such if they match. It is often the case in RNA-Seq that sequence from very highly expressed genes turns up in this panel. It may be helpful to try to identify some of these sequences using BLAST if they take up a large percentage of your library. 
-
-When you have a large experiment with many samples, checking FastQC HTML files can be a tedious task. To get around this, you can use use a program called [MultiQC](https://multiqc.info/) to combine them into a single report. 
-
-For HTML files in the **before/** folder:
 ```bash
-module load MultiQC/1.1
+INDIR=trimmed_sequences
+REPORTDIR=fastqc_reports
+mkdir -p $REPORTDIR
 
-multiqc --outdir raw_multiqc ./before/
-``` 
+cat ../01_raw_data/accessionlist.txt | parallel -j 4 \
+    fastqc --outdir $REPORTDIR $INDIR/{}_trim_{1..2}.fastq.gz
+```
 
-For HTML file in the **after/** folder:
+The final script ([03_multiqc.sh](/02_quality_control/03_multiqc.sh)) runs `multiqc` to aggregate HTML reports across samples. `-o` specifies the output directory `multiqc` will write reports to. 
+
 ```bash
-module load MultiQC/1.1
+multiqc -f -o fastp_multiqc fastp_reports
 
-multiqc --outdir trimmed_multiqc ./after/
-```  
+multiqc -f -o fastqc_multiqc fastqc_reports
+```
 
-The full slurm scripts are called [multiqc_raw.sh](/fastqc/multiqc_raw.sh) and [multiqc_trimmed.sh](/fastqc/multiqc_trimmed.sh) which can be found in the **fastqc/** folder.  As discribed above you may have to transfer these file to your computer to view them.
+[Transfer](https://bioinformatics.uconn.edu/resources-and-events/tutorials-2/data-transfer-2/) the multiqc reports to your local machine and view them in a web browser. You can use a xanadu node dedicated to file transfer: **transfer.cam.uchc.edu** and the unix utility `scp`. From a terminal on your local machine, you can copy the files as shown below, or use an FTP client with a graphical user interface such as FileZilla or Cyberduck: 
+
+```bash
+scp -r user-name@transfer.cam.uchc.edu:~/path/to/rnaseq-tutorial/02_quality_control/*multiqc .
+```
+The syntax is `scp x y`, meaning copy files `x` to location `y`. In this case "y" is `.`, which stands for your current working directory. 
+
+You'll see that not much trimming was done. That's because these sequences were trimmed prior to being uploaded to NCBI. For more information on what's in the reports, check out the [the documentation for fastqc](https://www.bioinformatics.babraham.ac.uk/projects/fastqc/). 
 
 
-## 5. Aligning Reads to a Genome using `HISAT2`  
+
+
+## 4. Aligning Reads to a Genome using `HISAT2`  
 
 #### Downloading the genome and building the Index:  
 
