@@ -7,7 +7,7 @@ Commands should never be executed on the submit nodes of any HPC machine.  If wo
 
 Contents
 1. [Overview](#1-overview)
-2. [Accessing the Data using SRA-Toolkit](#2-accessing-the-data-using-sra-toolkit)  
+2. [Accessing the Data](#2-Accessing-the-expression-data-using-SRA-Toolkit-and-the-genome-via-ENSEMBL)  
 3. [Quality control using Trimmomatic](#3-quality-control-using-Trimmomatic)
 4. [FASTQC Before and After Quality Control](#4-fastqc-before-and-after-quality-control)
 5. [Aligning Reads to a Genome using hisat2](#5-aligning-reads-to-a-genome-using-hisat2)
