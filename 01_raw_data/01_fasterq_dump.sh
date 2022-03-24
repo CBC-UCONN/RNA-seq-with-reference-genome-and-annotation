@@ -14,12 +14,14 @@
 echo `hostname`
 date
 
-# load parallel module
-module load parallel/20180122
-
 #################################################################
 # Download fastq files from SRA 
 #################################################################
+
+# load parallel module
+module load parallel/20180122
+module load sratoolkit/2.11.3
+
 # The data are a subset (2 populations) from this study:
     # https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE156460
 
@@ -29,9 +31,6 @@ module load parallel/20180122
 
 cat accessionlist.txt | parallel -j 2 fasterq-dump
 
-#################################################################
 # compress the files 
-#################################################################
-
 ls *fastq | parallel -j 12 gzip
 
