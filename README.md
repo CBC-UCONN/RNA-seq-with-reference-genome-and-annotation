@@ -9,7 +9,7 @@ Contents
 1. [ Overview ](#1-overview)
 2. [ Accessing the Data ](#2-Accessing-the-expression-data-using-SRA-Toolkit-and-the-genome-via-ENSEMBL)  
 3. [ Quality control ](#3-quality-control)
-4. [Aligning Reads to a Genome using hisat2](#4-aligning-reads-to-a-genome-using-hisat2)
+4. [Aligning Reads to a Genome using HISAT2](#4-aligning-reads-to-a-genome-using-hisat2)
 
 5. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
 7. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
@@ -273,52 +273,53 @@ You'll see that not much trimming was done. That's because these sequences were 
 
 ## 4. Aligning Reads to a Genome using `HISAT2`  
 
-#### Downloading the genome and building the Index:  
+`HISAT2` is a fast and sensitive spliced aligner for mapping next generation sequencing reads against a reference genome. First we'll use it to build an index for the reference genome and then we'll use that to map the reads. 
 
-HISAT2 is a fast and sensitive aligner for mapping next generation sequencing reads against a reference genome.
-In order to map the reads to a reference genome we have to do a few things to prepare. First we must download the reference genome! We will download the reference genome (http://useast.ensembl.org/Larimichthys_crocea/Info/Index) from the ENSEMBL database using the `wget` command.  
+### Building the Index:  
 
-```bash
-wget ftp://ftp.ensembl.org/pub/release-104/fasta/larimichthys_crocea/dna/Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
-gunzip Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa.gz
-```
+Why do we need an index? Genomes can be very large. A genome index allows the aligner to rapidly look up candidate alignment locations for each read rather than conduct an exhaustive search. 
 
-Next, we need to create a genome _index_. What is an index and why is it helpful? Genome indexing is the same as indexing a tome, like an encyclopedia. It is much easier to locate information in the vastness of an encyclopedia when you consult the index, which is ordered in an easily navigable way with pointers to the information you seek within. Genome indexing similarly structures the information contained in a genome so that a read mapper can quickly find possible mapping locations. 
-
-We will use the `hisat2-build` module to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together comprise the index. The command to generate the index looks like this: 
+Most aligners need to create their own indexes, so here we will use the `hisat2-build` module to make a HISAT index file for the genome. It will create a set of files with the suffix .ht2, these files together comprise the index. The commands to generate the index looks like this: 
 
 ```bash
-module load hisat2/2.2.1
-hisat2-build -p 16 Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa L_crocea
+OUTDIR=../genome/hisat2_index
+mkdir -p $OUTDIR
+
+GENOME=../genome/Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.dna.toplevel.fa
+
+hisat2-build -p 16 $GENOME $OUTDIR/Fhet
 ```  
-
-The full script can be found in the **index** folder by the name [hisat2_index.sh](/index/hisat2_index.sh). Navigate there and submit it by entering `sbatch hisat2_index.sh` on the command-line.   
-
-After running the script, the following files will be generated as part of the index.  To refer to the index for mapping the reads in the next step, you will use the file prefix, which in this case is: L_crocea  
+Note here we tell `hisat2-build` to put the index files in our genome resources directory `../genome/hisat2_index` and to use the prefix `Fhet`. After you run the script that directory should contain these files:
 
 ```bash
-index/
-|-- Larimichthys_crocea.L_crocea_2.0.dna.toplevel.fa
-|-- hisat2_index.sh
-|-- L_crocea.1.ht2
-|-- L_crocea.2.ht2
-|-- L_crocea.3.ht2
-|-- L_crocea.4.ht2
-|-- L_crocea.5.ht2
-|-- L_crocea.6.ht2
-|-- L_crocea.7.ht2
-`-- L_crocea.8.ht2
+genome/
+├── Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.105.gtf
+├── Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.cds.all.fa
+├── Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.cds.all.fa.fai
+├── Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.dna.toplevel.fa
+├── Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.dna.toplevel.fa.fai
+└── hisat2_index
+    ├── Fhet.1.ht2
+    ├── Fhet.2.ht2
+    ├── Fhet.3.ht2
+    ├── Fhet.4.ht2
+    ├── Fhet.5.ht2
+    ├── Fhet.6.ht2
+    ├── Fhet.7.ht2
+    └── Fhet.8.ht2
 ```
+The full script ([hisat2_index.sh](/03_index/hisat2_index.sh)) can be found in the folder `03_index`. Navigate there and submit it using `sbatch`. 
+
 
 ### Aligning the reads using `HISAT2`  
 
 Once we have created the index, the next step is to align the reads to the reference genome with `HISAT2`. By default `HISAT2` outputs the alignments in SAM format. We won't go over the format in detail in this tutorial, but should you actually need to look at the alignment files, it would be helpful to read over the [format specification](https://samtools.github.io/hts-specs/SAMv1.pdf) or have a look the [wikipedia page](https://en.wikipedia.org/wiki/SAM_(file_format)). 
 
-Raw SAM formatted files have two issues. First, they are uncompressed. Because of this they take up much more space than they need to and are slower to read and write. Second, `HISAT2` writes the alignments out in the same order it reads the sequences from the fastq file, but for downstream applications, they need to be sorted by **genome coordinate**. 
+Raw SAM formatted files have two issues. First, they are uncompressed. Because of this they take up much more space than they need to and are slower to read and write. Second, `HISAT2` writes the alignments out in the same order it reads the sequences from the fastq file, but for downstream applications, they need to be sorted by **genome coordinate**. To solve these issues we're going to sort and compress the files to BAM format. 
 
-To deal with these issues, we'll use a _pipe_ to send the results from `HISAT2` to `samtools` to sort the sequences, convert them to binary format and compress them. The resulting files will be in BAM format. We can then use `samtools` to read or otherwise manipulate them. We use pipes rather than writing intermediate files because it is much more efficient computationally, and requires less cleanup of unneeded intermediate files. 
+We could do these three steps separately, but for computational and disk space efficiency, we'll use a _pipe_, as we did above, to send the results from `HISAT2` to `samtools` to sort the sequences, convert them to binary format and compress them. We can then use `samtools` to read or otherwise manipulate the resulting BAM fiels. We use pipes rather than writing intermediate files because it is much more efficient computationally, and requires less cleanup of unneeded intermediate files. 
 
-Here's our code for aligning one sample:
+Here's code for aligning one sample:
 
 ```bash
 hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
@@ -328,33 +329,101 @@ hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fast
 
 The `|` is the pipe. It tells linux to use the output of the command to the left of the pipe as the input for the command to the right. You can chain together many commands using pipes. `samtools view` converts the SAM file produced by `hisat2` to uncompressed BAM. `-S` indicates the input is SAM format. `-h` indicates the SAM header should be written to the output. `-u` indicates that uncompressed BAM format should be written (no need to compress until the end). `-` indicates `samtools` should take input from the pipe. `samtools sort` sorts and compressed the file. `-T` gives a temporary file prefix. 
 
-Because BAM files are large and we may want to access specific sections quickly, we need to _index_ the bam files, just like we indexed the genome. Here we'll use `samtools` again. As an example:
+We're going to make this a little more complicated however, and use another method of paralellizing the job. Above we used the linux program `parallel`, here we're going to take advantage of a feature of SLURM called a "job array" to write one script, but have it submitted 19 times, once for each sample. You can read more about job arrays [here](https://github.com/CBC-UCONN/Job-Arrays-on-Xanadu), but we'll cover it briefly now. 
+
+First, to make SLURM run a job array, you need to modify the header. 
 
 ```bash
-samtools index LB2A_SRR1964642.bam LB2A_SRR1964642.bai
+#SBATCH -o %x_%A_%a.out
+#SBATCH -e %x_%A_%a.err
+#SBATCH --array=[0-18]%5
 ```
 
-This creates a `.bam.bai` index file to accompany each BAM file. 
+The first two lines specify the SLURM log files as in our previous header, except now each format includes a `%a`, which stands for the task number of the array. So now those log files will read something like `jobname_jobID_taskID.out`. The third line tells SLURM how many instances of the script (or "tasks") to run and how many it run at once. In this case we're running 19 tasks and we want to run them 5 at a time. Each task will be given an ID number from 0-18.  
 
-Once the mapping and indexing have been completed, the file structure is as follows:  
+In each instance of the job array, the variable SLURM_ARRAY_TASK_ID is set to the task ID, and we'll use that to pull out an accession number from our accession list. So the code will look like this:
+
 ```bash
-align/
-├── align_NNNNNN.err
-├── align_NNNNNN.out
-├── align.sh
-├── LB2A_SRR1964642.bam
-├── LB2A_SRR1964642.bai
-├── LB2A_SRR1964643.bam
-├── LB2A_SRR1964643.bai
-├── LC2A_SRR1964644.bam
-├── LC2A_SRR1964644.bai
-├── LC2A_SRR1964645.bam
-└── LC2A_SRR1964645.bai
+INDIR=../02_quality_control/trimmed_sequences
+OUTDIR=alignments
+mkdir -p $OUTDIR
+
+# hisat2 index
+INDEX=../genome/hisat2_index/Fhet
+
+# accession list location
+ACCLIST=../01_raw_data/accessionlist.txt
+
+# add 1 to the task ID (which we zero-indexed)
+NUM=$(expr ${SLURM_ARRAY_TASK_ID} + 1)
+
+# pull out a single sample accession
+SAMPLE=$(sed -n ${NUM}p $ACCLIST)
+
+# run hisat2
+hisat2 \
+	-p 8 \
+	-x $INDEX \
+	-1 $INDIR/${SAMPLE}_trim_1.fastq.gz \
+	-2 $INDIR/${SAMPLE}_trim_2.fastq.gz | \
+samtools view -@ 8 -S -h -u - | \
+samtools sort -@ 8 -T $SAMPLE - >$OUTDIR/$SAMPLE.bam
+
+# index bam files
+samtools index $OUTDIR/$SAMPLE.bam
+```
+
+Because BAM files are large and we may want to access specific sections quickly, in the last line of the script we _index_ the bam files, just like we indexed the genome. We use `samtools` for this. Indexing creates a `.bam.bai` index file to accompany each BAM file. 
+
+Once the mapping and indexing have been completed, the file structure is as follows, with two log files for each task and all of the .bam and .bai files written to the directory `alignments`. 
+
+```bash
+04_align/
+├── align_4396649_0.err
+├── align_4396649_0.out
+├── align_4396649_10.err
+├── align_4396649_10.out
+├── align_4396649_11.err
+├── align_4396649_11.out
+├── align_4396649_12.err
+├── align_4396649_12.out
+├── align_4396649_13.err
+├── align_4396649_13.out
+├── align_4396649_14.err
+├── align_4396649_14.out
+├── align_4396649_15.err
+├── align_4396649_15.out
+├── align_4396649_16.err
+├── align_4396649_16.out
+├── align_4396649_17.err
+├── align_4396649_17.out
+├── align_4396649_18.err
+├── align_4396649_18.out
+├── align_4396649_1.err
+├── align_4396649_1.out
+├── align_4396649_2.err
+├── align_4396649_2.out
+├── align_4396649_3.err
+├── align_4396649_3.out
+├── align_4396649_4.err
+├── align_4396649_4.out
+├── align_4396649_5.err
+├── align_4396649_5.out
+├── align_4396649_6.err
+├── align_4396649_6.out
+├── align_4396649_7.err
+├── align_4396649_7.out
+├── align_4396649_8.err
+├── align_4396649_8.out
+├── align_4396649_9.err
+├── align_4396649_9.out
+├── alignments
+└── align.sh
 ```  
 
-The full script for the slurm scheduler can be found in the **align/** directory by the name [align.sh](/align/align.sh). When you're ready, navigate there and execute it by entering `sbatch align.sh` on the command-line. 
+To run the [full script](/04_align/align.sh), enter the `04_align` directory and submit the script by typing `sbatch align.sh` on the command line. When the job starts running, if you type `squeue`, you should see as many as 5 jobs running at once, with the rest pending in the queue. 
 
-When `HISAT2` finishes aligning all the reads, it will write a summary which will be captured by SLURM in the file ending `.err`. 
+When `HISAT2` finishes aligning all the reads, it will write a summary which will be captured by SLURM in the files ending `.err`. 
 
 An alignment summary for a single sample is shown below: 
 ```
@@ -366,40 +435,40 @@ An alignment summary for a single sample is shown below:
 95.66% overall alignment rate
 ```  
 
-Let's have a look at the BAM file:
+Let's have a look at a BAM file. If the BAM file is indexed, we can use `samtools` to access reads mapping to any part of the genome using the `view` submodule like this:
+
 ```bash
-module load samtools/1.9
-samtools view -H LB2A_SRR1964642.bam | head
+module load samtools/1.12
+samtools view -H alignments/SRR12475447.bam | head
 ```
 
-which will give:
+This line will print something like:
 ```bash
-@HD	VN:1.0	SO:coordinate
-@SQ	SN:NC_040011.1	LN:43682218
-@SQ	SN:NC_040012.1	LN:14376772
-@SQ	SN:NC_040013.1	LN:52095323
-@SQ	SN:NC_040014.1	LN:6444570
-@SQ	SN:NC_040015.1	LN:5657075
-@SQ	SN:NC_040016.1	LN:27037660
-@SQ	SN:NC_040017.1	LN:29365971
-@SQ	SN:NC_040018.1	LN:33955600
-@SQ	SN:NC_040019.1	LN:13800884
+@HD     VN:1.0  SO:coordinate
+@SQ     SN:KN805525.1   LN:6356336
+@SQ     SN:KN805526.1   LN:6250690
+@SQ     SN:KN811289.1   LN:6115441
+@SQ     SN:KN811310.1   LN:5246820
+@SQ     SN:KN811405.1   LN:5058772
+@SQ     SN:KN811340.1   LN:5018176
+@SQ     SN:KN811371.1   LN:4958163
+@SQ     SN:KN811339.1   LN:4925094
+@SQ     SN:KN811372.1   LN:4897111
 ```
 
 Here we've requested that `samtools` return only the header section, which contains lots of metadata about the file, including all the contig names in the genome (each @SQ line contains a contig name). Each line begins with an "@" sign. The header can be quite large, especially if there are many contigs in your reference. 
 
-We can use `samtools` to access reads mapping to any part of the genome using the `view` submodule like this:
+To see the alignment records, try:
 
-`samtools view LB2A_SRR1964642.bam NC_040019.1:171000-172000`
+`samtools view alignments/SRR12475447.bam KN805525.1:20000-40000`
 
-This will print to the screen all the reads that mapped to the genomic interval `NC_040019.1:171000-172000`. 
+This will print to the screen all the reads that mapped to the genomic interval `KN805525.1:20000-40000`. 
 
 You can use pipes and other linux tools to get basic information about these reads:
 
-`samtools view LB2A_SRR1964642.bam NC_040019.1:171000-172000 | wc -l`
+`samtools view alignments/SRR12475447.bam KN805525.1:20000-40000 | wc -l`
 
-`wc -l` counts lines of text, so this command indicates that 411 reads map to this 1kb interval. 
-
+`wc -l` counts lines of text, so this command indicates that 87 reads map to this 20kb interval. 
 
 
 ## 6. Generating Total Read Counts from Alignment using htseq-count  

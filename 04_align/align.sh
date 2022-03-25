@@ -30,13 +30,13 @@ mkdir -p $OUTDIR
 	# use the task ID to pull a single line, containing a single accession number from the accession list
 	# then construct the file names in the call to hisat2 as below
 
+INDEX=../genome/hisat2_index/Fhet
+
 ACCLIST=../01_raw_data/accessionlist.txt
 
 NUM=$(expr ${SLURM_ARRAY_TASK_ID} + 1)
 
 SAMPLE=$(sed -n ${NUM}p $ACCLIST)
-
-INDEX=../genome/hisat2_index/Fhet
 
 # run hisat2
 hisat2 \
