@@ -12,6 +12,7 @@
 #SBATCH -e %x_%j.err
 
 echo `hostname`
+date
 
 #################################################################
 # Trimming/QC of reads using fastp
@@ -26,8 +27,10 @@ mkdir -p $REPORTDIR
 TRIMDIR=trimmed_sequences
 mkdir -p $TRIMDIR
 
+ACCLIST=$INDIR/accessionlist.txt
+
 # run fastp in parallel, 4 samples at a time
-cat $INDIR/accessionlist.txt | parallel -j 4 \
+cat $ACCLIST | parallel -j 4 \
 fastp \
 	--in1 $INDIR/{}_1.fastq.gz \
 	--in2 $INDIR/{}_2.fastq.gz \

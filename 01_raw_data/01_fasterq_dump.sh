@@ -29,7 +29,9 @@ module load sratoolkit/2.11.3
     # easiest to do this locally
     # https://github.com/ncbi/sra-tools
 
-cat accessionlist.txt | parallel -j 2 fasterq-dump
+ACCLIST=accessionlist.txt
+
+cat $ACCLIST | parallel -j 2 fasterq-dump
 
 # compress the files 
 ls *fastq | parallel -j 12 gzip
