@@ -2,8 +2,8 @@
 #SBATCH --job-name=hisat2_index
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 16
-#SBATCH --mem=20G
+#SBATCH -c 4
+#SBATCH --mem=10G
 #SBATCH --partition=general
 #SBATCH --qos=general
 #SBATCH --mail-type=ALL

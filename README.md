@@ -9,9 +9,9 @@ Contents
 1. [ Overview ](#1-overview)
 2. [ Accessing the Data ](#2-Accessing-the-expression-data-using-SRA-Toolkit-and-the-genome-via-ENSEMBL)  
 3. [ Quality control ](#3-quality-control)
-4. [Aligning Reads to a Genome using HISAT2](#4-aligning-reads-to-a-genome-using-hisat2)
+4. [ Aligning Reads to a Genome using HISAT2 ](#4-aligning-reads-to-a-genome-using-hisat2)
+5. [ Generating counts of fragments mapping to genes using htseq-count ](#6-Generating-counts-of-fragments-mapping-to-genes-using htseq-count)
 
-5. [Generating Total Read Counts from Alignment using htseq-count](#6-generating-total-read-counts-from-alignment-using-htseq-count)
 7. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
 	1. [Common plots for differential expression analysis](#common-plots-for-differential-expression-analysis)
 	2. [Using DESeq2](#using-deseq2)
@@ -470,16 +470,89 @@ You can use pipes and other linux tools to get basic information about these rea
 
 `wc -l` counts lines of text, so this command indicates that 87 reads map to this 20kb interval. 
 
+### Alignment QC
 
-## 6. Generating Total Read Counts from Alignment using htseq-count  
+Now that we have our alignments, we are going to generate some summary statistics on them to see if everything went well. We'll use two tools, `samtools` and `qualimap` and again aggregate the statistics produced by those tools with `multiqc` (we'll also put the main samtools stats in one big table with some bash code). 
 
-Now we will be using the program `htseq-count` to count how many reads map to each annotated gene in the genome. To do this, we first need to download the annotation file. It is in GFF format. It can be done using the following command:  
+The first script, [01_samtools_stats.sh](/05_align_qc/01_samtools_stats.sh), runs `samtools stats` on each bam file. The parallel command should look familiar now:
 
 ```bash
-wget ftp://ftp.ensembl.org/pub/release-104/gtf/larimichthys_crocea/Larimichthys_crocea.L_crocea_2.0.104.gtf.gz
-gunzip Larimichthys_crocea.L_crocea_2.0.104.gtf.gz
-```   
-Once downloaded and unziped, then you can count the features using the `htseq-count` program.  
+cat $ACCLIST | parallel -j 15 \
+	"samtools stats $INDIR/{}.bam >$OUTDIR/{}.stats"
+```
+
+`samtools stats` output has tons of information in it, but we'll focus on the first table, e.g. for sample `SRR12475447`, which contains info on how many sequences there are, how many mapped, etc. 
+
+```
+grep "^SN" samtools_stats/SRR12475447.stats
+
+SN      raw total sequences:    26685046
+SN      filtered sequences:     0
+SN      sequences:      26685046
+SN      is sorted:      1
+SN      1st fragments:  13342523
+SN      last fragments: 13342523
+SN      reads mapped:   22575888
+SN      reads mapped and paired:        20233934        # paired-end technology bit set + both mates mapped
+SN      reads unmapped: 4109158
+SN      reads properly paired:  18740460        # proper-pair bit set
+SN      reads paired:   26685046        # paired-end technology bit set
+SN      reads duplicated:       0       # PCR or optical duplicate bit set
+SN      reads MQ0:      109495  # mapped and MQ=0
+SN      reads QC failed:        0
+SN      non-primary alignments: 1015794
+SN      total length:   2624444083      # ignores clipping
+SN      total first fragment length:    1324788027      # ignores clipping
+SN      total last fragment length:     1299656056      # ignores clipping
+SN      bases mapped:   2228090187      # ignores clipping
+SN      bases mapped (cigar):   2210488803      # more accurate
+SN      bases trimmed:  0
+SN      bases duplicated:       0
+SN      mismatches:     15170309        # from NM fields
+SN      error rate:     6.862875e-03    # mismatches / bases mapped (cigar)
+SN      average length: 98
+SN      average first fragment length:  99
+SN      average last fragment length:   97
+SN      maximum length: 101
+SN      maximum first fragment length:  101
+SN      maximum last fragment length:   101
+SN      average quality:        36.0
+SN      insert size average:    719.1
+SN      insert size standard deviation: 1361.1
+SN      inward oriented pairs:  9344564
+SN      outward oriented pairs: 127493
+SN      pairs with other orientation:   93441
+SN      pairs on different chromosomes: 551365
+SN      percentage of properly paired reads (%):        70.2
+```
+
+The samtools stats script also has some bash code for aggregating these tables for all samples into a single file. We won't cover it in detail here, but after you run the script you can have a look at it and try to figure out what it's doing. 
+
+The second script, [02_qualimap.sh](/05_align_qc/02_qualimap.sh), runs `qualimap` on each bam file. In this case, we need to provide the GTF annotation file to so `qualimap` can count up how many reads map to annotated features. The command looks like this, again in parallel:
+
+```bash
+cat $ACCLIST | \
+parallel -j 5 \
+    qualimap \
+        rnaseq \
+        -bam $INDIR/{}.bam \
+        -gtf $GTF \
+        -outdir $OUTDIR/{} \
+        --java-mem-size=2G  
+```
+
+Qualimap produces HTML-formatted output files you can download and view in your web browser. 
+
+Finally, we'll aggregate all of these statistics using our `multiqc` script, [03_multiqc.sh](/05_align_qc/03_multiqc.sh). 
+
+Move into the `05_align_qc` directory and submit the first two scripts. When they have finished, submit the multiqc script. When that is finished, download the reports and view them in a web browser. 
+
+You should see that the mapping rates are in the mid-80s, and the rate of properly mapped read pairs is significantly lower. Of the mapped reads, around 20% map to regions of the genome not annotated as genes. This is likely because the fragmented nature of this genome assembly means reads pairs often map to different scaffolds and that the annotation is not very complete. 
+
+
+## 5. Generating counts of fragments mapping to genes using htseq-count  
+
+Now we will use the program `htseq-count` to count how many RNA fragments (i.e. read pairs) map to each annotated gene in the genome. 
 
 ```bash
 htseq-count -s no -r pos -f bam ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.104.gtf > LB2A_SRR1964642.counts

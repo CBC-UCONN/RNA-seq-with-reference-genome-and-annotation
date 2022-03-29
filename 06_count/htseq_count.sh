@@ -2,8 +2,8 @@
 #SBATCH --job-name=htseq_count
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 10
-#SBATCH --mem=20G
+#SBATCH -c 5
+#SBATCH --mem=10G
 #SBATCH --partition=general
 #SBATCH --qos=general
 #SBATCH --mail-type=ALL

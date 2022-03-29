@@ -2,8 +2,8 @@
 #SBATCH --job-name=align
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 8
-#SBATCH --mem=20G
+#SBATCH -c 4
+#SBATCH --mem=11G
 #SBATCH --partition=xeon
 #SBATCH --qos=general
 #SBATCH --mail-type=ALL
@@ -40,12 +40,12 @@ SAMPLE=$(sed -n ${NUM}p $ACCLIST)
 
 # run hisat2
 hisat2 \
-	-p 8 \
+	-p 2 \
 	-x $INDEX \
 	-1 $INDIR/${SAMPLE}_trim_1.fastq.gz \
 	-2 $INDIR/${SAMPLE}_trim_2.fastq.gz | \
-samtools view -@ 8 -S -h -u - | \
-samtools sort -@ 8 -T $SAMPLE - >$OUTDIR/$SAMPLE.bam
+samtools view -@ 1 -S -h -u - | \
+samtools sort -@ 1 -T $SAMPLE - >$OUTDIR/$SAMPLE.bam
 
 # index bam files
 samtools index $OUTDIR/$SAMPLE.bam

@@ -2,8 +2,8 @@
 #SBATCH --job-name=multiqc
 #SBATCH -n 1
 #SBATCH -N 1
-#SBATCH -c 12
-#SBATCH --mem=20G
+#SBATCH -c 4
+#SBATCH --mem=5G
 #SBATCH --partition=general
 #SBATCH --qos=general
 #SBATCH --mail-type=ALL
