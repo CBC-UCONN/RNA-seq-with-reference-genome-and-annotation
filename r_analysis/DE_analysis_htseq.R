@@ -7,7 +7,7 @@ library("DESeq2")
 library("apeglm")
 library("pheatmap")
 library("tidyverse")
-
+library("ggrepel")
 
 ######################################################
 # Point R to count data, set an output file prefix 
@@ -15,7 +15,7 @@ library("tidyverse")
 
 # create an object with the directory containing your counts:
 	# !!edit this to point to your own count file directory!!
-directory <- "../count"
+directory <- "../06_count/counts"
 
 # ensure the count files are where you think they are
 list.files(directory)
@@ -27,18 +27,23 @@ sampleFiles <- list.files(directory, pattern = ".*counts")
 # Read the count data into R along with treatment information
 ######################################################
 
-# create a vector of sample names. ensure these are in the same order as the "sampleFiles" object!
-sampleNames <- c("LB2A_1","LB2A_2","LC2A_1","LC2A_2")
+# load in metadata table
+meta <- read.csv("../01_raw_data/metadata.txt") %>%
+	mutate(population=str_replace(population, "Eliza.*", "ER")) %>%
+	mutate(population=str_replace(population, "King.*", "KC")) %>%
+	mutate(pcb_dosage = case_when(pcb_dosage == 0 ~ "control", pcb_dosage > 0 ~ "exposed"))
 
-# create a vector of conditions. again, mind that they are ordered correctly!
-sampleCondition <- c("control","control","treated","treated")
+# ensure that sampleFiles and metadata table are in the same order
 
-# now create a data frame from these three vectors. 
+all( str_remove(sampleFiles, ".counts") == meta[,1] )
+
+# now create a data frame with sample names, file names and treatment information. 
 sampleTable <- data.frame(
-		sampleName = sampleNames,
-		fileName = sampleFiles,
-		condition = sampleCondition
-		)
+	sampleName = meta$Run,
+	fileName = sampleFiles,
+	population = meta$population,
+	dose = meta$pcb_dosage
+	)
 
 # look at the data frame to ensure it is what you expect:
 sampleTable
@@ -47,24 +52,28 @@ sampleTable
 ddsHTSeq <- DESeqDataSetFromHTSeqCount(
 		sampleTable = sampleTable, 
 		directory = directory, 
-		design = ~ condition
+		design = ~ population*dose
 		)
 
 ######################################################
 # Reset treatment factors
 ######################################################
 
+# factor order determines reference level (i.e. control vs exposed)
+	# factors are automatically ordered alphabetically
+	# we want KC as the reference level
+
 # To see the levels as they are now:
-ddsHTSeq$condition
+ddsHTSeq$population
 
 # To replace the order with one of your choosing, create a vector with the order you want:
-treatments <- c("control","treated")
+treatments <- c("KC","ER")
 
 # Then reset the factor levels:
-ddsHTSeq$condition <- factor(ddsHTSeq$condition, levels = treatments)
+ddsHTSeq$population <- factor(ddsHTSeq$population, levels = treatments)
 
 # verify the order
-ddsHTSeq$condition
+ddsHTSeq$population
 
 ######################################################
 # Filter out genes with very low expression
@@ -82,7 +91,7 @@ hist(logsumcounts,breaks=100)
 # you can see the typically high dynamic range of RNA-Seq, with a mode in the distribution around 1000 fragments per gene, but some genes up over 1 million fragments. 
 
 # get genes with summed counts greater than 20
-keep <- sumcounts > 20
+keep <- sumcounts > 50
 
 # keep only the genes for which the vector "keep" is TRUE
 ddsHTSeq <- ddsHTSeq[keep,]
@@ -93,42 +102,85 @@ ddsHTSeq <- ddsHTSeq[keep,]
 
 dds <- DESeq(ddsHTSeq)
 
+
 ######################################################
-# Get a table of results
+# Which results do we want?
 ######################################################
 
-# get results table
-res <- results(dds)
+# we are interested in:
+	# 1) genes responding to exposure in KC, the sensitive population
+	# 2) genes responding to exposure in ER, the tolerant population
+	# 3) genes that respond differently to exposure in ER and KC
+
+# how do we extract that?
+
+# in this experiment there are four coefficents. you can see them here:
+
+resultsNames(dds)
+
+# we can get (1) by the two below methods. 
+	# they extract ONLY the effect of treatment in the reference population. 
+
+res1 <- results(dds, contrast=c("dose","control","exposed"))
+
+# or
+
+res1b <- results(dds, name="dose_exposed_vs_control")
+
+# we can get (2) by:
+
+res2 <- results(dds, contrast=list(c("dose_exposed_vs_control","populationER.doseexposed")))
+
+# we can get (3) by:
+
+res3 <- results(dds, name="populationER.doseexposed")
+
+# just for fun, we can also ask about baseline differences between ER and KC
+
+res4 <- results(dds, name="population_ER_vs_KC")
+
+
+######################################################
+# Quickly summarize results
+######################################################
 
 # get a quick summary of the table
-summary(res)
+summary(res1)
+summary(res2)
+summary(res3)
+summary(res4)
 
 # check out the first few lines
-head(res)
+head(res1)
+
+# or sort the table by pvalue and get the first n lines
+
+as.data.frame(res1) %>% arrange(pvalue) %>% head(n=10)
+
 
 ######################################################
 # Get a table of shrunken log2 fold changes
 ######################################################
 
 # get shrunken log fold changes
-res_shrink <- lfcShrink(dds,coef="condition_treated_vs_control")
+res_shrink1 <- lfcShrink(dds,type="ashr",coef="dose_exposed_vs_control")
+res_shrink2 <- lfcShrink(dds,type="ashr",contrast=list(c("dose_exposed_vs_control","populationER.doseexposed")))
+res_shrink3 <- lfcShrink(dds,type="ashr",coef="populationER.doseexposed")
+res_shrink4 <- lfcShrink(dds,type="ashr",coef="population_ER_vs_KC")
 
 # plot the shrunken log2 fold changes against the raw changes:
-plot(
-	x=res$log2FoldChange,
-	y=res_shrink$log2FoldChange,pch=20,
-	cex=.2,
-	col=1+(res$padj < 0.05),
-	xlab="raw log2 fold change",
-	ylab="shrunken log2 fold change",
-	xlim=c(-5,5),
-	ylim=c(-5,5)
-	)
-abline(0,1)
+
+	data.frame(l2fc=res1$log2FoldChange, l2fc_shrink=res_shrink1$log2FoldChange, padj=res1$padj) %>%
+		filter(l2fc > -5 & l2fc < 5 & l2fc_shrink > -5 & l2fc_shrink < 5) %>%
+		ggplot(aes(x=l2fc, y=l2fc_shrink,color=padj > 0.1)) +
+			geom_point(size=.25) + 
+			geom_abline(intercept=0,slope=1, color="gray")
+
 
 # get the top 20 genes by shrunken log2 fold change
-top20 <- order(-abs(res_shrink$log2FoldChange))[1:20]
-res_shrink[top20,]
+	# this will include genes with outliers
+top20 <- order(-abs(res_shrink1$log2FoldChange))[1:20]
+res_shrink1[top20,]
 
 
 ######################################################
@@ -136,21 +188,22 @@ res_shrink[top20,]
 ######################################################
 
 # MA plot
-plotMA(res_shrink, ylim=c(-4,4))
+plotMA(res1, ylim=c(-4,4))
+plotMA(res_shrink1, ylim=c(-4,4))
 
 ##############
 
 #Volcano plot
 
 # negative log-scaled adjusted p-values
-log_padj <- -log(res_shrink$padj,10)
+log_padj <- -log(res_shrink1$padj,10)
 log_padj[log_padj > 100] <- 100
 
 # plot
-plot(x=res_shrink$log2FoldChange,
+plot(x=res_shrink1$log2FoldChange,
      y=log_padj,
      pch=20,
-     cex=.2,
+     cex=.5,
      col=(log_padj > 10)+1, # color padj < 0.1 red
      ylab="negative log-scaled adjusted p-value",
      xlab="shrunken log2 fold changes")
@@ -162,14 +215,17 @@ plot(x=res_shrink$log2FoldChange,
 # normalized, variance-stabilized transformed counts for visualization
 vsd <- vst(dds, blind=FALSE)
 
-plotPCA(vsd, intgroup="condition")
+plotPCA(vsd, intgroup=c("population","dose"))
 
 # alternatively, using ggplot
 
-dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
+dat <- plotPCA(vsd,returnData=TRUE,intgroup=c("population","dose"))
 
-p <- ggplot(dat,aes(x=PC1,y=PC2,col=group))
-p <- p + geom_point()
+p <- ggplot(dat,aes(x=PC1,y=PC2,col=paste(population, dose)))
+p <- p + geom_point() + 
+	xlab(paste("PC1: ", round(attr(dat,"percentVar")[1],2)*100, "% variation explained", sep="")) + 
+	ylab(paste("PC2: ", round(attr(dat,"percentVar")[2],2)*100, "% variation explained", sep="")) +
+	geom_label_repel(aes(label=name))
 p
 
 ##############
@@ -179,28 +235,48 @@ p
 # regularized log transformation of counts
 rld <- rlog(dds, blind=FALSE)
 
-# get top 50 log fold change genes
-top50 <- order(-abs(res_shrink$log2FoldChange))[1:50]
-df <- data.frame(colData(dds)[,"condition"])
-	rownames(df) <- colnames(dds)
-	colnames(df) <- "condition"
+# order gene names by absolute value of shrunken log2 fold change (excluding cook's cutoff outliers)
+lfcorder <- data.frame(res_shrink1) %>%
+  filter(!is.na(padj)) %>% 
+  arrange(-abs(log2FoldChange)) %>% 
+  rownames() 
+
+df <- data.frame(colData(dds)[,c("population","dose")])
+  rownames(df) <- colnames(dds)
+  colnames(df) <- c("population","dose")
+
 pheatmap(
-	assay(rld)[top50,], 
-	cluster_rows=TRUE, 
-	show_rownames=TRUE,
-	cluster_cols=FALSE,
-	annotation_col=df
-	)
+  assay(rld)[lfcorder[1:30],], 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df
+  )
+
+# scale by baseMean (estimated mean across all samples)
+pheatmap(
+  assay(rld)[lfcorder[1:30],] - log(res1[lfcorder[1:30],"baseMean"],2), 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df
+  )
+
+# scale by reference level (KC control samples)
+pheatmap(
+  assay(rld)[lfcorder[1:30],] - rowMeans(assay(rld)[lfcorder[1:30],dds$population=="KC" & dds$dose=="control"]), 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df
+  )
+
 
 ##############
 
 # plot counts for individual genes
 
-l2fc_ord <- order(-abs(res_shrink$log2FoldChange))
-plotCounts(dds, gene=l2fc_ord[1], intgroup="condition")
-
-
-
+plotCounts(dds, gene=lfcorder[9], intgroup=c("population","dose"))
 
 ######################################################
 # Get gene annotations using biomaRt
@@ -216,10 +292,10 @@ library(biomaRt)
 ##############################
 
 # see a list of "marts" available at host "ensembl.org"
-listMarts(host="ensembl.org")
+listMarts(host="https://ensembl.org")
 
 # create an object for the Ensembl Genes v100 mart
-mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="ensembl.org")
+mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="https://ensembl.org")
 
 # occasionally ensembl will have connectivity issues. we can try an alternative function:
 	# select a mirror: 'www', 'uswest', 'useast', 'asia'
@@ -231,18 +307,17 @@ listDatasets(mart)
 
 # figure out which dataset is the croaker
 	# be careful using grep like this. verify the match is what you want
-searchDatasets(mart,pattern="lcrocea")
+searchDatasets(mart,pattern="Mummichog")
 
 # there's only one match, get the name
-croakerdata <- searchDatasets(mart,pattern="lcrocea")[,1]
-
+killidata <- searchDatasets(mart,pattern="Mummichog")[,1]
 
 # create an object for the croaker dataset
-croaker_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", dataset = croakerdata)
+killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "https://ensembl.org", dataset = killidata)
 
 # if above there were connectivity issues and you used the alternative function then:
 	# select a mirror: 'www', 'uswest', 'useast', 'asia'
-	# croaker_mart <- useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", dataset = croakerdata, mirror = "useast")
+	# killi_mart <- useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", dataset = killidata, mirror = "useast")
 
 
 #########################
@@ -253,19 +328,19 @@ croaker_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", 
 
 # see a list of all "filters" available for the lcrocea dataset.
 	# at the time of writing, over 300
-listFilters(croaker_mart)
+listFilters(killi_mart)
 
 # see a list of all "attributes" available
 	# 129 available at the time of writing
-listAttributes(mart = croaker_mart, page="feature_page")
+listAttributes(mart = killi_mart, page="feature_page")
 
 # we can also search the attributes and filters
-searchAttributes(mart = croaker_mart, pattern = "ensembl_gene_id")
+searchAttributes(mart = killi_mart, pattern = "ensembl_gene_id")
 
-searchFilters(mart = croaker_mart, pattern="ensembl")
+searchFilters(mart = killi_mart, pattern="ensembl")
 
 # get gene names and transcript lengths when they exist
-ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","transcript_length"),mart=croaker_mart)
+ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","transcript_length"),mart=killi_mart)
 
 # pick only the longest transcript for each gene ID
 ann <- group_by(ann, ensembl_gene_id) %>% 
@@ -273,13 +348,16 @@ ann <- group_by(ann, ensembl_gene_id) %>%
 
 # get GO term info
   # each row is a single gene ID to GO ID mapping, so the table has many more rows than genes in the analysis
-go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=croaker_mart)
+go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=killi_mart)
 
 # get KEGG info
-# kegg_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","kegg_enzyme"),mart=croaker_mart)
+# kegg_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","kegg_enzyme"),mart=killi_mart)
 
 # put results and annotation in the same table
-res_ann <- cbind(res_shrink,ann)
+res_ann1 <- cbind(res_shrink1,ann)
+res_ann2 <- cbind(res_shrink2,ann)
+res_ann3 <- cbind(res_shrink3,ann)
+res_ann4 <- cbind(res_shrink4,ann)
 
 
 
