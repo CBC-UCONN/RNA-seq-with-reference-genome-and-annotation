@@ -1,5 +1,5 @@
 # this R code has been condensed from the tutorial here: 
-	# https://github.com/CBC-UCONN/RNA-seq-with-reference-genome-and-annotation
+	# github.com/CBC-UCONN/RNA-seq-with-reference-genome-and-annotation
 
 
 # Load the libraries we'll need in the following code:
@@ -121,7 +121,7 @@ resultsNames(dds)
 # we can get (1) by the two below methods. 
 	# they extract ONLY the effect of treatment in the reference population. 
 
-res1 <- results(dds, contrast=c("dose","control","exposed"))
+res1 <- results(dds, contrast=c("dose","exposed","control"))
 
 # or
 
@@ -179,8 +179,7 @@ res_shrink4 <- lfcShrink(dds,type="ashr",coef="population_ER_vs_KC")
 
 # get the top 20 genes by shrunken log2 fold change
 	# this will include genes with outliers
-top20 <- order(-abs(res_shrink1$log2FoldChange))[1:20]
-res_shrink1[top20,]
+arrange(data.frame(res_shrink1), log2FoldChange) %>% head(., n=20)
 
 
 ######################################################
@@ -236,15 +235,17 @@ p
 rld <- rlog(dds, blind=FALSE)
 
 # order gene names by absolute value of shrunken log2 fold change (excluding cook's cutoff outliers)
-lfcorder <- data.frame(res_shrink1) %>%
+lfcorder <- data.frame(res_shrink3) %>%
   filter(!is.na(padj)) %>% 
   arrange(-abs(log2FoldChange)) %>% 
   rownames() 
 
+# create a metadata data frame to add to the heatmaps
 df <- data.frame(colData(dds)[,c("population","dose")])
   rownames(df) <- colnames(dds)
   colnames(df) <- c("population","dose")
 
+# use regularized log-scaled counts
 pheatmap(
   assay(rld)[lfcorder[1:30],], 
   cluster_rows=TRUE, 
@@ -253,7 +254,7 @@ pheatmap(
   annotation_col=df
   )
 
-# scale by baseMean (estimated mean across all samples)
+# re-scale regularized log-scaled counts by baseMean (estimated mean across all samples)
 pheatmap(
   assay(rld)[lfcorder[1:30],] - log(res1[lfcorder[1:30],"baseMean"],2), 
   cluster_rows=TRUE, 
@@ -262,7 +263,7 @@ pheatmap(
   annotation_col=df
   )
 
-# scale by reference level (KC control samples)
+# re-scale regularized log-scaled counts by reference level (KC control samples)
 pheatmap(
   assay(rld)[lfcorder[1:30],] - rowMeans(assay(rld)[lfcorder[1:30],dds$population=="KC" & dds$dose=="control"]), 
   cluster_rows=TRUE, 
@@ -292,10 +293,10 @@ library(biomaRt)
 ##############################
 
 # see a list of "marts" available at host "ensembl.org"
-listMarts(host="https://ensembl.org")
+listMarts(host="ensembl.org")
 
 # create an object for the Ensembl Genes v100 mart
-mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="https://ensembl.org")
+mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="ensembl.org")
 
 # occasionally ensembl will have connectivity issues. we can try an alternative function:
 	# select a mirror: 'www', 'uswest', 'useast', 'asia'
@@ -305,15 +306,15 @@ mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="https://ensembl.org")
 	# at the time of writing, there were 203
 listDatasets(mart)
 
-# figure out which dataset is the croaker
+# figure out which dataset is the killifish
 	# be careful using grep like this. verify the match is what you want
 searchDatasets(mart,pattern="Mummichog")
 
 # there's only one match, get the name
 killidata <- searchDatasets(mart,pattern="Mummichog")[,1]
 
-# create an object for the croaker dataset
-killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "https://ensembl.org", dataset = killidata)
+# create an object for the killifish dataset
+killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", dataset = killidata)
 
 # if above there were connectivity issues and you used the alternative function then:
 	# select a mirror: 'www', 'uswest', 'useast', 'asia'
@@ -344,7 +345,8 @@ ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl
 
 # pick only the longest transcript for each gene ID
 ann <- group_by(ann, ensembl_gene_id) %>% 
-  summarize(.,description=unique(description),transcript_length=max(transcript_length))
+  summarize(.,description=unique(description),transcript_length=max(transcript_length)) %>%
+  as.data.frame()
 
 # get GO term info
   # each row is a single gene ID to GO ID mapping, so the table has many more rows than genes in the analysis
@@ -377,10 +379,10 @@ res_ann4 <- cbind(res_shrink4,ann)
 library(goseq)
 
 # 0/1 vector for DE/not DE
-de <- as.numeric(res$padj < 0.1)
-names(de) <- rownames(res)
+de <- as.numeric(res3$padj[!is.na(res3$padj)] < 0.1)
+names(de) <- rownames(res3)[!is.na(res3$padj)]
 # length of each gene
-len <- ann[[3]]
+len <- ann[[3]][!is.na(res3$padj)]
 
 # first try to account for transcript length bias by calculating the
 # probability of being DE based purely on gene length
@@ -406,14 +408,14 @@ g <- go_ann$go_id==GO.wall[2,1]
 gids <- go_ann[g,1]
 
 # inspect DE results for those genes
-res_ann[gids,]
+res_ann3[gids,] %>% data.frame()
 
 
 # plot log2 fold changes for those genes, sorted
-ord <- order(res_ann[gids,]$log2FoldChange)
-plot(res_ann[gids,]$log2FoldChange[ord],
+ord <- order(res_ann3[gids,]$log2FoldChange)
+plot(res_ann3[gids,]$log2FoldChange[ord],
      ylab="l2fc of genes in top enriched GO term",
-     col=(res_ann[gids,]$padj[ord] < 0.1) + 1,
+     col=(res_ann3[gids,]$padj[ord] < 0.1) + 1,
      pch=20,cex=.5)
 abline(h=0,lwd=2,lty=2,col="gray")
 
@@ -423,9 +425,9 @@ abline(h=0,lwd=2,lty=2,col="gray")
 # we can also run a similar analysis using the web platform gProfiler
 
 # execute the following code, then copy the all ensembl gene IDs printed to the screen to your clipboard
-cat(rownames(res)[res$padj < 0.1])
+cat(rownames(res3)[which(res3$padj < 0.1)])
 
-# then visit https://biit.cs.ut.ee/gprofiler/gost
+# then visit biit.cs.ut.ee/gprofiler/gost
 # select Laramichtys crocea as the organism
 # paste the output into the query window and press "Run Query"
 # if you explore the results, you'll see they are very similar. 
@@ -435,7 +437,7 @@ cat(rownames(res)[res$padj < 0.1])
 ######################################################
 
 # set a prefix for output file names
-outputPrefix <- "Croaker_DESeq2"
+outputPrefix <- "killifish_DESeq2"
 
 # save data results and normalized reads to csv
 resdata <- merge(
