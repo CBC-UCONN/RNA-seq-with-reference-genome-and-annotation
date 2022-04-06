@@ -11,9 +11,9 @@ Contents
 3. [ Quality control ](#3-quality-control)
 4. [ Aligning Reads to a Genome using HISAT2 ](#4-aligning-reads-to-a-genome-using-hisat2)
 5. [ Generating counts of fragments mapping to genes using htseq-count ](#5-Generating-counts-of-fragments-mapping-to-genes-using-htseq-count)
-6. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
-7. [Getting gene annotations with `biomaRt`](#8-getting-gene-annotations-with-biomart)
-8. [Gene ontology enrichment with `goseq` and `gProfiler`](#9-gene-ontology-enrichment-with-goseq-and-gProfiler)  
+6. [ Pairwise differential expression with counts in R with DESeq2 ](#6-pairwise-differential-expression-with-counts-in-r-using-deseq2)
+7. [ Getting gene annotations with `biomaRt` ](#7-getting-gene-annotations-with-biomart)
+8. [ Gene ontology enrichment with `goseq` and `gProfiler` ](#8-gene-ontology-enrichment-with-goseq-and-gProfiler)  
 
 
 ## 1. Overview  
@@ -929,7 +929,7 @@ pheatmap(
 
 This is pretty messy. One issue with this plot is that genes with overall very high expression are clustering together rather than those with similar fold changes. Next we can scale by _baseMean_, effectively dividing all the counts by the mean across the whole experiment. 
 
-```
+```R
 # re-scale regularized log-scaled counts by baseMean (estimated mean across all samples)
 pheatmap(
   assay(rld)[lfcorder[1:30],] - log(res1[lfcorder[1:30],"baseMean"],2), 
