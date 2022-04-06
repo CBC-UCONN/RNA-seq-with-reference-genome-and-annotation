@@ -319,12 +319,16 @@ Raw SAM formatted files have two issues. First, they are uncompressed. Because o
 
 We could do these three steps separately, but for computational and disk space efficiency, we'll use a _pipe_, as we did above, to send the results from `HISAT2` to `samtools` to sort the sequences, convert them to binary format and compress them. We can then use `samtools` to read or otherwise manipulate the resulting BAM fiels. We use pipes rather than writing intermediate files because it is much more efficient computationally, and requires less cleanup of unneeded intermediate files. 
 
-Here's code for aligning one sample:
+Here's example code for aligning one sample:
 
 ```bash
-hisat2 -p 8 -x ../index/L_crocea -U ../quality_control/LB2A_SRR1964642_trim.fastq.gz | \
-	samtools view -S -h -u -@ 8 - | \
-	samtools sort -@ 8 -T SRR1964642 - >LB2A_SRR1964642.bam
+hisat2 \
+	-p 8 \
+	-x $INDEX \
+	-1 $INDIR/${SAMPLE}_trim_1.fastq.gz \
+	-2 $INDIR/${SAMPLE}_trim_2.fastq.gz | \
+samtools view -@ 8 -S -h -u - | \
+samtools sort -@ 8 -T $SAMPLE - >$OUTDIR/$SAMPLE.bam
 ```  
 
 The `|` is the pipe. It tells linux to use the output of the command to the left of the pipe as the input for the command to the right. You can chain together many commands using pipes. `samtools view` converts the SAM file produced by `hisat2` to uncompressed BAM. `-S` indicates the input is SAM format. `-h` indicates the SAM header should be written to the output. `-u` indicates that uncompressed BAM format should be written (no need to compress until the end). `-` indicates `samtools` should take input from the pipe. `samtools sort` sorts and compressed the file. `-T` gives a temporary file prefix. 
@@ -552,58 +556,88 @@ You should see that the mapping rates are in the mid-80s, and the rate of proper
 
 ## 5. Generating counts of fragments mapping to genes using htseq-count  
 
-Now we will use the program `htseq-count` to count how many RNA fragments (i.e. read pairs) map to each annotated gene in the genome. 
+Now we will use the program `htseq-count` to count how many RNA fragments (i.e. read pairs) map to each annotated gene in the genome. Again, we'll use our accession list and the program `parallel`. We also need to provide our GTF formatted annotation so reads can be assigned to gene features. 
 
 ```bash
-htseq-count -s no -r pos -f bam ../align/LB2A_SRR1964642.bam Larimichthys_crocea.L_crocea_2.0.104.gtf > LB2A_SRR1964642.counts
+# accession list
+ACCLIST=../01_raw_data/accessionlist.txt
+
+# gtf formatted annotation file
+GTF=../genome/Fundulus_heteroclitus.Fundulus_heteroclitus-3.0.2.105.gtf
+
+# run htseq-count on each sample, up to 5 in parallel
+cat $ACCLIST | \
+parallel -j 5 \
+    "htseq-count \
+        -s no \
+        -r pos \
+        -f bam $INDIR/{}.bam \
+        $GTF \
+        > $OUTDIR/{}.counts"
 ```
+
 - `-s no` indicates we're using an unstranded RNA-seq library. 
 - `-r pos` tells `htseq-count` that our BAM file is coordinate sorted. 
 - `-f bam` indicates that our input file is in BAM format. 
 
 
-The above command should be repeated for all other BAM files as well. The full script for slurm scheduler can be found in the **count/** folder which is called [htseq_count.sh](/count/htseq_count.sh).  
+The above command should be repeated for all other BAM files as well. The full script is [htseq_count.sh](/06_count/htseq_count.sh) in the `06_count` directory. Go to that directory and submit the script now. This step will take a few hours. 
 
 Once all the bam files have been counted, the following files will be found in the count directory.  
 ```bash
 count/
-├── htseq_count_NNNNN.err
-├── htseq_count_NNNNN.out
-├── htseq_count.sh
-├── Larimichthys_crocea.L_crocea_2.0.104.gtf
-├── LB2A_SRR1964642.counts
-├── LB2A_SRR1964643.counts
-├── LC2A_SRR1964644.counts
-└── LC2A_SRR1964645.counts
+├── counts
+│   ├── SRR12475447.counts
+│   ├── SRR12475448.counts
+│   ├── SRR12475449.counts
+│   ├── SRR12475450.counts
+│   ├── SRR12475451.counts
+│   ├── SRR12475452.counts
+│   ├── SRR12475453.counts
+│   ├── SRR12475454.counts
+│   ├── SRR12475455.counts
+│   ├── SRR12475456.counts
+│   ├── SRR12475468.counts
+│   ├── SRR12475469.counts
+│   ├── SRR12475470.counts
+│   ├── SRR12475471.counts
+│   ├── SRR12475472.counts
+│   ├── SRR12475473.counts
+│   ├── SRR12475474.counts
+│   ├── SRR12475475.counts
+│   └── SRR12475476.counts
+├── htseq_count_NNNNNNN.err
+├── htseq_count_NNNNNNN.out
+└── htseq_count.sh
 ```  
 
-Let's have a look at the contents of a counts file:
+The count files are in `/06_count/counts`. Let's have a look at the contents of a counts file:
 
 ```bash
-head LB2A_SRR1964642.counts 
+head SRR12475447.counts  
 ```
 
 which will look like:  
 
 ```
-ENSLCRG00005000002	0
-ENSLCRG00005000003	2922
-ENSLCRG00005000004	0
-ENSLCRG00005000005	28885
-ENSLCRG00005000006	0
-ENSLCRG00005000007	5923
-ENSLCRG00005000008	0
-ENSLCRG00005000009	0
-ENSLCRG00005000010	0
-ENSLCRG00005000011	10255
+ENSFHEG00000000002      0
+ENSFHEG00000000003      974
+ENSFHEG00000000004      0
+ENSFHEG00000000005      2058
+ENSFHEG00000000006      0
+ENSFHEG00000000007      4185
+ENSFHEG00000000008      0
+ENSFHEG00000000009      0
+ENSFHEG00000000010      0
+ENSFHEG00000000011      3745
 ``` 
 
 We see the layout is quite straightforward, with two columns separated by a tab. The first column gives the Ensembl gene ID, the second column is the number of mRNA fragments that mapped to the gene. These counts are the raw material for the differential expression analysis in the next section. 
 
 
-## 7. Pairwise Differential Expression with Counts in R using DESeq2  
+## 6. Pairwise Differential Expression with Counts in R using DESeq2  
 
-To identify differentially expressed (DE) genes, we will use the `R` package `DESeq2`, a part of the [Bioconductor](https://www.bioconductor.org/about/) project. After the counts have been generated, typical differential expression analyses can be done easily on laptop computers, so we'll run this part of the analysis locally, instead of on the Xanadu cluster. 
+To identify differentially expressed (DE) genes, we will use the `R` package `DESeq2`, a part of the [Bioconductor](https://www.bioconductor.org/about/) project. After the counts have been generated, typical differential expression analyses can be done easily on a laptop, so we'll run this part of the analysis locally, instead of on the Xanadu cluster. 
 
 There are a couple ways to download the appropriate files to your local computer. If you're on a mac or linux machine you can use "secure copy", `scp`. Close your Xanadu connection and run the following command in your terminal:  
 
@@ -611,7 +645,7 @@ There are a couple ways to download the appropriate files to your local computer
 scp user_name@transfer.cam.uchc.edu:/Path/to/count/*.counts /path/to/your/local/destination/directory  
 ```  
 
-You may alternatively use an FTP client with a graphical user interface such as FileZilla or Cyberduck. `transfer.cam.uchc.edu` is the server used to transfer files. Regular login nodes cannot be used for file transfer. The transfer server should only be used to move files of small to moderate size (e.g < 1GB). For larger files, please use Globus (see our tutorial on the CBC webpage). 
+You may alternatively use an FTP client with a graphical user interface such as FileZilla or Cyberduck. `transfer.cam.uchc.edu` is the server used to transfer files. Regular login nodes cannot be used for file transfer. The transfer server should only be used to move files of small to moderate size (e.g < 1GB). For larger files, please use Globus (see tutorial on the CBC webpage). 
 
 Typical DE analyses involve both a statistical analysis, which is used to rigorously identify genes of interest and their effect sizes, and data visualization, which is used both as a way of illustrating results and as a form of quality control. Even a quick examination of some of the plots we'll make below can reveal problematic samples or unexpected heterogeneity within treatment groups that could bias results, or to put things in a more positive light, inspire new analyses or interpretations. 
 
@@ -625,19 +659,19 @@ For differential expression and visualization:
 - `DESeq2` needs to be installed through Bioconductor. See instructions [here](https://bioconductor.org/packages/release/bioc/html/DESeq2.html). 
 - `apeglm` needs to be installed through Bioconductor. Instructions [here](https://bioconductor.org/packages/release/bioc/html/apeglm.html)
 - `pheatmap` can be installed by typing `install.packages("pheatmap")`
-- `ggplot2` is best installed along with the entire set of [tidyverse](https://tidyverse.tidyverse.org/) packages. `install.packages("tidyverse")`
-
+- `tidyverse` a set of packages for data manipulation and visualization [tidyverse](https://tidyverse.tidyverse.org/) packages. `install.packages("tidyverse")`
+- `ggrepel` an add-on package for ggplot that allows the plotting of labels so they don't overlap. `install.packages("ggrepel")`
 
 For retrieving annotations and doing gene ontology enrichment:
 - `biomaRt` needs to be installed through Bioconductor. Instructions [here](https://bioconductor.org/packages/release/bioc/html/biomaRt.html)
 - `goseq` also needs to be installed through Bioconductor. Instructions [here](https://bioconductor.org/packages/release/bioc/html/goseq.html)
 
 
-### Beginning the statistical analysis
+### The statistical analysis
 
 All the following R code has been condensed into a single script "Full_DE_analysis.R" in the "r_analysis" directory of the tutorial repository. You can open that in `RStudio` rather than copying and pasting from here if you'd like. 
 
-This first chunk of code will load the necessary R packages and assign values to some R objects we'll use to tell `DESeq2` how and where to read and write files. Note that in this example, the code is expecting to find the "count" directory in the parent of the project directory (that's what `directory <- "../count"` means). For this code to work, you'll have to edit the path to point to the directory containing *your* count data. 
+This first chunk of code will load the necessary R packages and assign values to some R objects we'll use to tell `DESeq2` how and where to read and write files. Note that in this example, the code is expecting to find the "count" directory in the parent of the project directory (that's what `directory <- "../06_count/count"` means). For this code to work, you'll have to edit the path to point to the directory containing *your* count data. 
 
 ```R
 # Load the libraries we'll need in the following code:
@@ -645,11 +679,12 @@ library("DESeq2")
 library("apeglm")
 library("pheatmap")
 library("tidyverse")
+library("ggrepel")
 
 
 # create an object with the directory containing your counts:
 	# !!edit this to point to your own count file directory!!
-directory <- "../count"
+directory <- "../06_count/counts"
 
 # ensure the count files are where you think they are
 list.files(directory)
@@ -658,23 +693,27 @@ sampleFiles <- list.files(directory, pattern = ".*counts")
 
 ```
 
-
-
 Now we'll create a data frame that connects sample names, treatments, and count files. `DESeq2` has a function that can use that table to read and format the data so that it can be analyzed. 
 
 ```R
-# create a vector of sample names. ensure these are in the same order as the "sampleFiles" object!
-sampleNames <- c("LB2A_1","LB2A_2","LC2A_1","LC2A_2")
+# load in metadata table
+	# recode the population names to two letter abbreviations and the PCB-126 dosages to "control" and "exposed"
+meta <- read.csv("../01_raw_data/metadata.txt") %>%
+	mutate(population=str_replace(population, "Eliza.*", "ER")) %>%
+	mutate(population=str_replace(population, "King.*", "KC")) %>%
+	mutate(pcb_dosage = case_when(pcb_dosage == 0 ~ "control", pcb_dosage > 0 ~ "exposed"))
 
-# create a vector of conditions. again, mind that they are ordered correctly!
-sampleCondition <- c("control","control","treated","treated")
+# ensure that sampleFiles and metadata table are in the same order
 
-# now create a data frame from these three vectors. 
+all( str_remove(sampleFiles, ".counts") == meta[,1] )
+
+# now create a data frame with sample names, file names and treatment information. 
 sampleTable <- data.frame(
-		sampleName = sampleNames,
-		fileName = sampleFiles,
-		condition = sampleCondition
-		)
+	sampleName = meta$Run,
+	fileName = sampleFiles,
+	population = meta$population,
+	dose = meta$pcb_dosage
+	)
 
 # look at the data frame to ensure it is what you expect:
 sampleTable
@@ -683,27 +722,31 @@ sampleTable
 ddsHTSeq <- DESeqDataSetFromHTSeqCount(
 		sampleTable = sampleTable, 
 		directory = directory, 
-		design = ~ condition
+		design = ~ population * dose
 		)
 ```
 
-Now we have a "DESeqDataSet" object (you can see this by typing `is(ddsHTSeq)`). By default, the creation of this object will order your treatments alphabetically, and the fold changes will be calculated relative to the first factor. If you would like to choose the first factor (e.g. the control), it's best to set this explicitly in your code. We'll demonstrate that here even though our factor names ("control" and "treatment") already result in the correct order for this data set. 
+Here we need to point out that the last line of code in the above block is the formula that specifies the experimental design. Here we have two factors, population and dose, each with two levels (KC/ER and control/exposed). `population * dose` means we're telling `DESeq2` to estimate the effects for both population, dose, and and the population x dose interaction. The interaction term allows us to specifically ask about dose effects that are significantly different in each population, which was the main aim of this experiment. We could equivalently have specified this as `population + dose + population:dose`. 
+
+Specifying design formulas (and extracting results) for complicated experiments can be tricky. [This](https://rstudio-pubs-static.s3.amazonaws.com/329027_593046fb6d7a427da6b2c538caf601e1.html) is a nice rundown of common examples, but if you have any doubts, you should 1) run your design formula and subsequent extraction of results by someone knowledgeable and/or 2) look at the counts of specific significant genes to ensure they match your expectations. 
+
+Now we have a "DESeqDataSet" object (you can see this by typing `is(ddsHTSeq)`). By default, the creation of this object will order your treatments alphabetically, and the fold changes will be calculated relative to the first factor. If you would like to choose the first factor (e.g. the control), it's best to set this explicitly in your code. In this case, we want to use the control group from the KC population as the reference level, so we want to make sure "control" and "KC" are the first factor levels. Because they're sorted alphanumerically, "control" should already be, and we'll adjust the population factor below. 
 
 ```R
 # To see the levels as they are now:
-ddsHTSeq$condition
+ddsHTSeq$population
 
 # To replace the order with one of your choosing, create a vector with the order you want:
-treatments <- c("control","treated")
+treatments <- c("KC","ER")
 
 # Then reset the factor levels:
-ddsHTSeq$condition <- factor(ddsHTSeq$condition, levels = treatments)
+ddsHTSeq$population <- factor(ddsHTSeq$population, levels = treatments)
 
 # verify the order
-ddsHTSeq$condition
+ddsHTSeq$population
 ```
 
-As a next step, we can toss out some genes with overall low expression levels. We won't have statistical power to assess differential expression for those genes anyway. This isn't strictly necessary because `DESeq2` does _independent filtering_ of results, but if you have a lot of samples or a complex experimental design, it can speed up the analysis. 
+As a next step, we can toss out some genes with overall low expression levels. We won't have statistical power to assess differential expression for those genes anyway. This isn't strictly necessary because `DESeq2` does _independent filtering_ of results, which will essentially ignore these very low expression genes, but if you have a lot of samples or a complex experimental design, it can speed up the analysis. 
 
 ```R
 # what does expression look like across genes?
@@ -718,13 +761,13 @@ hist(logsumcounts,breaks=100)
 # you can see the typically high dynamic range of RNA-Seq, with a mode in the distribution around 1000 fragments per gene, but some genes up over 1 million fragments. 
 
 # get genes with summed counts greater than 20
-keep <- sumcounts > 20
+keep <- sumcounts > 50
 
 # keep only the genes for which the vector "keep" is TRUE
 ddsHTSeq <- ddsHTSeq[keep,]
 ```
 
-Ok, now we can do the statistical analysis. All the steps are wrapped in a single function, `DESeq()`. 
+Ok, now we can do the statistical analysis. All the steps to fit the model are wrapped in a single function, `DESeq()`. 
 
 ```R
 dds <- DESeq(ddsHTSeq)
@@ -744,20 +787,25 @@ fitting model and testing
 You can learn more in depth about the statistical model by starting with [this vignette](https://bioconductor.org/packages/devel/bioc/vignettes/DESeq2/inst/doc/DESeq2.html) and reading through some of the references to specific parts of the methods, but it will be helpful to explain a little here. 
 
 - _estimating size factors_: This part of the analysis accounts for the fact that standard RNA-seq measures **relative abundances** of transcripts within each sample, not **absolute abundances** (i.e. transcripts/cell). Because of this, if libraries are sequenced to different depths, genes with identical expression levels will have different counts. It may seem that simply adjusting for sequencing depth could account for this issue, but changes in gene expression among samples complicate things, so a slightly more complex normalization is applied. 
-- three dispersion estimate steps_: `DESeq2` models the variance in the counts for each sample using a negative binomial distribution. In this distribution the variance in counts is determined by a _dispersion_ parameter. This parameter needs to be estimated for each gene, but for sample sizes typical to RNA-Seq (3-5 per treatment) there isn't a lot of power to estimate it accurately. The key innovation of packages like `DESeq2` is to assume genes with similar expression have similar dispersions, and to pool information across them to estimate the dispersion for each gene. These steps accomplish that using an "empirical Bayesian" procedure. Without getting into detail, what this ultimately means is that the dispersion parameter for a particular gene is a _compromise_ between the signal in the data for that gene, and the signal in other, similar genes. 
+- three dispersion estimate steps_: `DESeq2` models the variance in the counts for each sample using a _negative binomial distribution_. In this distribution the variance in counts among samples for one gene is determined by a _dispersion_ parameter. This parameter needs to be estimated for each gene, but for sample sizes typical to RNA-Seq (3-5 per treatment) there isn't a lot of power to estimate it accurately. The key innovation of packages like `DESeq2` is to assume genes with similar expression have similar dispersions, and so pool information across them to estimate the dispersion for each gene. These steps accomplish that using an "empirical Bayesian" procedure. Without getting into detail, what this ultimately means is that the dispersion parameter for a particular gene is a _compromise_ between the signal in the data for that gene, and the signal in other, similar genes. 
 - _fitting model and testing_: Once the dispersions are estimated, this part of the analysis asks if there are treatment effects for each gene. In the default case, DESeq2 uses a _Wald test_ to ask if the log2 fold change between two treatments is significantly different than zero. 
 
-Once we've done this analysis, we can extract a nice clean table of the results from the messy R object:
+Once we've done this analysis, we can start extracting nice clean tables of the results from the messy R object. The first thing we need to know is which results we'd like to extract. There are four sets of results we might want to see: 1) genes responding to exposure in KC, 2) genes responding to exposure in ER, 3) genes with population by exposure interactions and 4) baseline differences between populations. These results are each combinations of coefficients estimated in the model. 
+
+Here we'll just focus on genes with significant interactions. For that, we only need to test whether the interaction term is significant. In the full R script we demonstrate how to extract the other results. It's important to specify the alpha value (for the adjusted p-values) you plan to use as your significance cutoff here, as it impacts the independent filtering procedure and thus the adjusted p-values. The default is `alpha=0.1`, which we're leaving unchanged. 
 
 ```R
+# list coefficients
+resultsNames(dds)
+
 # get results table
-res <- results(dds)
+res3 <- results(dds, name="populationER.doseexposed")
 
 # get a quick summary of the table
-summary(res)
+summary(res3)
 
 # check out the first few lines
-head(res)
+head(res3)
 ```
 
 In the results table there are six columns:
@@ -769,7 +817,9 @@ In the results table there are six columns:
 - _pvalue_: raw p-value
 - _padj_: A p-value adjusted for false discoveries. 
 
-If we were interested in ranking the genes to look at, say, the top 20 most important, what would be the best factor? Log2 fold changes? Adjusted p-values? This is a tricky question. It turns out that both of these are not great because they are confounded with expression level. Genes with low expression can have extremely inflated fold changes, while genes with very high expression, but low fold changes, can have extremely low p-values. 
+It's important to note here that the interaction term log2FoldChange is calculated with respect to the effect of treatment _in the reference level, KC_. So if a gene has a log2 fold change of 4 in KC exposed vs KC control, and the same gene has a log2 fold change of 0 in ER exposed vs ER control, then the interaction term log2 fold change will be -4. 
+
+If we were interested in ranking the genes to look at, say, the top 20 most important, what would be the best factor? Log2 fold changes? Adjusted p-values? This is a tricky question. It turns out that both of these are not great because they are confounded with expression level. Genes with low expression can have unrealistically high fold change estimates (again because of low sample size), while genes with very high expression, but low fold changes, can have extremely low p-values. 
 
 To deal with this, `DESeq2` provides a function for _shrinking_ the log2 fold changes. These shrunken log2 fold changes can be used to more robustly rank genes. Like the empirical Bayesian estimate of the dispersion parameter, this turns the log2 fold changes into a compromise between the signal in the data and a prior distribution that pulls them toward zero. If the signal in the data is weak, the log2 fold change is pulled toward zero, and the gene will be ranked lower. If the signal is strong, it resists the pull. This does not impact the p-values. 
 
@@ -777,23 +827,17 @@ We can get the shrunken log fold changes like this:
 
 ```R
 # get shrunken log fold changes
-res_shrink <- lfcShrink(dds,coef="condition_treated_vs_control")
+res_shrink3 <- lfcShrink(dds,type="ashr",coef="populationER.doseexposed")
 
 # plot the shrunken log2 fold changes against the raw changes:
-plot(
-	x=res$log2FoldChange,
-	y=res_shrink$log2FoldChange,pch=20,
-	cex=.2,
-	col=1+(res$padj < 0.05),
-	xlab="raw log2 fold change",
-	ylab="shrunken log2 fold change"
-	)
-abline(0,1)
+data.frame(l2fc=res3$log2FoldChange, l2fc_shrink=res_shrink3$log2FoldChange, padj=res1$padj) %>%
+	filter(l2fc > -5 & l2fc < 5 & l2fc_shrink > -5 & l2fc_shrink < 5) %>%
+	ggplot(aes(x=l2fc, y=l2fc_shrink,color=padj > 0.1)) +
+		geom_point(size=.25) + 
+		geom_abline(intercept=0,slope=1, color="gray")
 
 # get the top 20 genes by shrunken log2 fold change
-top20 <- order(-abs(res_shrink$log2FoldChange))[1:20]
-res_shrink[top20,]
-
+arrange(data.frame(res_shrink3), log2FoldChange) %>% head(., n=20)
 ```
 
 ### RNA-Seq data visualization
@@ -803,75 +847,110 @@ There are several different visualizations we can use to illustrate our results 
 We'll start with the standard __Bland-Altman, or MA plot__, which is a high-level summary of the results. 
 
 ```R
-plotMA(res_shrink, ylim=c(-4,4))
+plotMA(res_shrink3, ylim=c(-4,4))
 ```
-MA-plots depict the log2 fold change in expression against the mean expression for each gene. In this case we're using the shrunken fold changes, but you can plot the raw ones as well. You don't typically learn much from an MA plot, but it does nicely illustrate that you can achieve significance (red dots) at a much smaller fold change for highly expressed genes. It can also be a first indication that a treatment causes primarily up or down-regulation. 
+MA-plots depict the log2 fold change in expression against the mean expression for each gene. In this case we're using the shrunken fold changes, but you can plot the raw ones as well. You don't typically learn much from an MA plot, but it does nicely illustrate that you can achieve significance (red dots) at a much smaller fold change for highly expressed genes. It can also be a first indication that a treatment causes primarily up or down-regulation. If the bulk of the points in the MA plot are shifted off of zero on the Y-axis, this is an indication that something has likely gone wrong with the normalization (calculation of scaling factors). 
 
-Next we'll make a __volcano plot__, a plot of the negative log-scaled adjusted p-value against the log2 fold change. 
+Next we'll make a __volcano plot__, a plot of the negative log-scaled adjusted p-value against the log2 fold change. These aren't very useful, but they were presented in a lot of classic microarray-based gene expression studies. 
 
 ```R
 # negative log-scaled adjusted p-values
-log_padj <- -log(res_shrink$padj,10)
+log_padj <- -log(res_shrink3$padj,10)
 log_padj[log_padj > 100] <- 100
 
 # plot
-plot(x=res_shrink$log2FoldChange,
+plot(x=res_shrink3$log2FoldChange,
      y=log_padj,
      pch=20,
-     cex=.2,
+     cex=.5,
      col=(log_padj > 10)+1, # color padj < 0.1 red
      ylab="negative log-scaled adjusted p-value",
      xlab="shrunken log2 fold changes")
+
 ```
 
 
-Next we'll plot the the results of a __principal components analysis (PCA)__ of the expression data. For each sample in an RNA-Seq analysis, there are potentially tens of thousands of genes with expression measurements. A PCA attempts to explain the variation in all those genes with a smaller number of _principal components_. In an RNA-Seq analysis, we typically want to see if the PCs reveal any unexpected similarities or differences among samples in their overall expression profiles. A PCA can often quickly reveal outliers, sample labeling problems, or potentially problematic population structure. 
+Next we'll plot the the results of a __principal components analysis (PCA)__ of the expression data. For each sample in an RNA-Seq analysis, there are potentially tens of thousands of genes with expression measurements. A PCA attempts to explain the variation in all those genes with a smaller number of synthetic variables called _principal components_. In an RNA-Seq analysis, we typically want to see if the PCs reveal any unexpected similarities or differences among samples in their overall expression profiles. A PCA can often clearly reveal outliers, sample labeling problems, or potentially problematic population structure. 
 
 
 ```R
 # normalized, variance-stabilized transformed counts for visualization
 vsd <- vst(dds, blind=FALSE)
 
-plotPCA(vsd, intgroup="condition")
-
 # alternatively, using ggplot
 
-dat <- plotPCA(vsd, intgroup="condition",returnData=TRUE)
+dat <- plotPCA(vsd,returnData=TRUE,intgroup=c("population","dose"))
 
-p <- ggplot(dat,aes(x=PC1,y=PC2,col=group))
-p + geom_point()
+p <- ggplot(dat,aes(x=PC1,y=PC2,col=paste(population, dose)))
+p <- p + geom_point() + 
+	xlab(paste("PC1: ", round(attr(dat,"percentVar")[1],2)*100, "% variation explained", sep="")) + 
+	ylab(paste("PC2: ", round(attr(dat,"percentVar")[2],2)*100, "% variation explained", sep="")) +
+	geom_label_repel(aes(label=name))
 p
 ```
+![Expression PCA](/images/killi_pca.png)
 
-Here we used a _variance stabilized transformation_ of the count data in the PCA, rather than the normalized counts. This is an attempt to deal with the very high range in expression levels (6 orders of magnitude) and the many zeroes, and is similar to, but a bit more robust than simpler approaches, such as simply adding 1 and log2 scaling the normalized counts. 
+Here we used a _variance stabilized transformation_ of the count data in the PCA, rather than the normalized counts. This is an attempt to deal with the very high range in expression levels (6 orders of magnitude) and the many zeroes in the count matrix, and is similar to, but a bit more robust than simpler approaches, such as simply adding 1 and log2 scaling the normalized counts. 
 
-You can see that in our case, the first PC, which explains 99% of the variance in gene expression, separates our two treatments. The high percent variance explained here is not a typical result. Most experiments are much messier, with much less variance explained. In studies with population structure, the first few PCs often reflect that structure, rather than treatment effects. 
+You can see that in our case, the first PC, which explains 43% of the total (scaled, variance stabilized) expression variance separates a single ER control sample from the rest. This is a strong indicator there may be something wrong with that sample. The embryo may have had issues or something could have gone wrong with the library preparation. It's worth digging into this further, and probably repeating the analysis with that sample excluded, though to keep the tutorial from getting too long we won't do that here. It's easy to edit the code at the beginning to exclude the sample. 
 
+The second PC mostly separates ER from KC. The single KC control sample clustering with the other ER samples may indicate a sample labeling issue here as well, but it could just be that sample has a profile that is more ER-like. 
 
-Next we'll make a heatmap of the top 50 DE genes. 
+There's one more interesting foreshadow of results to come, the control and exposed samples from KC, but not ER, separate on PC2. It is sometimes, but not always, the case that treatment effects are clear in PCA plots. 
+
+Next we'll make a heatmap of the top 30 most significant genes for the population x dose interaction. It's a bit tricky figuring out how to display expression values in a heatmap. Even with log-scaled counts the variation in overall expression can confound clustering, make the visualization messy, or both. Here we'll try plotting three different ways. First, we'll transform the counts using another method, the _regularized logarthim_. Then we'll grab the top 30 genes by shrunken log2 fold change. 
 
 ```R
 # regularized log transformation of counts
 rld <- rlog(dds, blind=FALSE)
 
-# get top 50 log fold change genes
-top50 <- order(-abs(res_shrink$log2FoldChange))[1:50]
-df <- data.frame(colData(dds)[,"condition"])
-	rownames(df) <- colnames(dds)
-	colnames(df) <- "condition"
-pheatmap(
-	assay(rld)[top50,], 
-	cluster_rows=TRUE, 
-	show_rownames=TRUE,
-	cluster_cols=FALSE,
-	annotation_col=df
-	)
+# order gene names by absolute value of shrunken log2 fold change (excluding cook's cutoff outliers)
+lfcorder <- data.frame(res_shrink3) %>%
+  filter(!is.na(padj)) %>% 
+  arrange(-abs(log2FoldChange)) %>% 
+  rownames() 
+
+# create a metadata data frame to add to the heatmaps
+df <- data.frame(colData(dds)[,c("population","dose")])
+  rownames(df) <- colnames(dds)
+  colnames(df) <- c("population","dose")
 ```
 
-This time we transformed the counts using a slightly different method, the _regularized logarithm_. In the plot, genes are clustered by their expression values, and the regularized, log-transformed expression values are used to color the cells. 
+Now we'll plot just the regularized counts. 
 
+```R
+# use regularized log-scaled counts
+pheatmap(
+  assay(rld)[lfcorder[1:30],], 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df
+  )
+```
+![regularized count heatmap](/images/heatmap1.jpg)
 
-Finally, when you've got DE genes, it's always a good idea to at least spot check a few of them to see if the normalized counts seem consistent with expectations. This can reveal a few different problems. First, although `DESeq2` attempts to manage outliers, they can sometimes drive the signal of DE. If you're interested in hanging a bunch of interpretation on a few genes, it's always a good idea to check them. Second, unexpected heterogeneity within treatment groups can also drive signal. This is not the same as having outliers, and it may indicate problems with experimental procedures, or possibly something biologically interesting. Often this will also show up in a PCA or heatmap.
+This is pretty messy. One issue with this plot is that genes with overall very high expression are clustering together rather than those with similar fold changes. Next we can scale by _baseMean_, effectively dividing all the counts by the mean across the whole experiment. 
+
+```
+# re-scale regularized log-scaled counts by baseMean (estimated mean across all samples)
+pheatmap(
+  assay(rld)[lfcorder[1:30],] - log(res1[lfcorder[1:30],"baseMean"],2), 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df
+  )
+```
+![scaled by baseMean heatmap](/images/heatmap2.jpg)
+
+This might normally be a good choice, but we have one gene, Cyp1A (ENSFHEG00000010510) that has such a massive fold change in KC that it dominates the plot. Also, _baseMean_ doesn't really have any natural meaning to us. Lastly we can try scaling by the average expression level in the control samples in our reference population, KC. 
+
+![scaled by KC-control heatmap](/images/heatmap3.jpg)
+
+I think this one displays the data the best. We still don't get totally clean clustering by expression profile, but to my eye this best shows a few features of the data: 1) for these genes with significant interactions, the pattern is that exposed KC individuals are showing a strong response to treatment, but ER is not. 2) Almost all of the response to treatment in KC is up-regulation, with a smaller subset of genes being down-regulated. Our outlier sample SRR12475449, is an outlier even for important genes, suggesting it should be removed. 
+
+Finally, when you've got DE genes, it's always a good idea to at least spot check a few of them to see if the normalized counts seem consistent with expectations. This can reveal a few different problems. First, although `DESeq2` attempts to manage outliers, they can sometimes drive the signal of DE. If you're interested in hanging a bunch of interpretation on a few genes, you should check them. Second, unexpected heterogeneity within treatment groups can also drive signal. This is not the same as having outliers, and it may indicate problems with experimental procedures, or possibly something biologically interesting. Often this will also show up in a PCA or heatmap.
 
 ```R
 l2fc_ord <- order(-abs(res_shrink$log2FoldChange))
