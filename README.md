@@ -10,13 +10,10 @@ Contents
 2. [ Accessing the Data ](#2-Accessing-the-expression-data-using-SRA-Toolkit-and-the-genome-via-ENSEMBL)  
 3. [ Quality control ](#3-quality-control)
 4. [ Aligning Reads to a Genome using HISAT2 ](#4-aligning-reads-to-a-genome-using-hisat2)
-5. [ Generating counts of fragments mapping to genes using htseq-count ](#6-Generating-counts-of-fragments-mapping-to-genes-using htseq-count)
-
-7. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
-	1. [Common plots for differential expression analysis](#common-plots-for-differential-expression-analysis)
-	2. [Using DESeq2](#using-deseq2)
-8. [Getting gene annotations with `biomaRt`](#8-getting-gene-annotations-with-biomart)
-9. [Gene ontology enrichment with `goseq` and `gProfiler`](#9-gene-ontology-enrichment-with-goseq-and-gProfiler)  
+5. [ Generating counts of fragments mapping to genes using htseq-count ](#5-Generating-counts-of-fragments-mapping-to-genes-using-htseq-count)
+6. [Pairwise differential expression with counts in R with DESeq2](#7-pairwise-differential-expression-with-counts-in-r-using-deseq2)
+7. [Getting gene annotations with `biomaRt`](#8-getting-gene-annotations-with-biomart)
+8. [Gene ontology enrichment with `goseq` and `gProfiler`](#9-gene-ontology-enrichment-with-goseq-and-gProfiler)  
 
 
 ## 1. Overview  
@@ -953,8 +950,7 @@ I think this one displays the data the best. We still don't get totally clean cl
 Finally, when you've got DE genes, it's always a good idea to at least spot check a few of them to see if the normalized counts seem consistent with expectations. This can reveal a few different problems. First, although `DESeq2` attempts to manage outliers, they can sometimes drive the signal of DE. If you're interested in hanging a bunch of interpretation on a few genes, you should check them. Second, unexpected heterogeneity within treatment groups can also drive signal. This is not the same as having outliers, and it may indicate problems with experimental procedures, or possibly something biologically interesting. Often this will also show up in a PCA or heatmap.
 
 ```R
-l2fc_ord <- order(-abs(res_shrink$log2FoldChange))
-plotCounts(dds, gene=l2fc_ord[1], intgroup="condition")
+plotCounts(dds, gene=lfcorder[1], intgroup=c("population","dose"))
 ```
 
 Here we've plotted the gene with the largest shrunken log2 fold change. 
