@@ -9,9 +9,9 @@ Contents
 1. [ Overview ](#1-overview)
 2. [ Accessing the Data ](#2-Accessing-the-expression-data-using-SRA-Toolkit-and-the-genome-via-ENSEMBL)  
 3. [ Quality control ](#3-quality-control)
-4. [ Aligning Reads to a Genome using HISAT2 ](#4-aligning-reads-to-a-genome-using-hisat2)
-5. [ Generating counts of fragments mapping to genes using htseq-count ](#5-Generating-counts-of-fragments-mapping-to-genes-using-htseq-count)
-6. [ Pairwise differential expression with counts in R with DESeq2 ](#6-pairwise-differential-expression-with-counts-in-r-using-deseq2)
+4. [ Aligning Reads to a Genome using `HISAT2` ](#4-aligning-reads-to-a-genome-using-hisat2)
+5. [ Generating counts of fragments mapping to genes using `htseq-count` ](#5-Generating-counts-of-fragments-mapping-to-genes-using-htseq-count)
+6. [ Pairwise differential expression with counts in `R` with `DESeq`2 ](#6-pairwise-differential-expression-with-counts-in-r-using-deseq2)
 7. [ Getting gene annotations with `biomaRt` ](#7-getting-gene-annotations-with-biomart)
 8. [ Gene ontology enrichment with `goseq` and `gProfiler` ](#8-gene-ontology-enrichment-with-goseq-and-gProfiler)  
 
@@ -551,7 +551,7 @@ Move into the `05_align_qc` directory and submit the first two scripts. When the
 You should see that the mapping rates are in the mid-80s, and the rate of properly mapped read pairs is significantly lower. Of the mapped reads, around 20% map to regions of the genome not annotated as genes. This is likely because the fragmented nature of this genome assembly means reads pairs often map to different scaffolds and that the annotation is not very complete. 
 
 
-## 5. Generating counts of fragments mapping to genes using htseq-count  
+## 5. Generating counts of fragments mapping to genes using `htseq-count`  
 
 Now we will use the program `htseq-count` to count how many RNA fragments (i.e. read pairs) map to each annotated gene in the genome. Again, we'll use our accession list and the program `parallel`. We also need to provide our GTF formatted annotation so reads can be assigned to gene features. 
 
@@ -632,7 +632,7 @@ ENSFHEG00000000011      3745
 We see the layout is quite straightforward, with two columns separated by a tab. The first column gives the Ensembl gene ID, the second column is the number of mRNA fragments that mapped to the gene. These counts are the raw material for the differential expression analysis in the next section. 
 
 
-## 6. Pairwise Differential Expression with Counts in R using DESeq2  
+## 6. Pairwise Differential Expression with Counts in `R` using `DESeq2`  
 
 To identify differentially expressed (DE) genes, we will use the `R` package `DESeq2`, a part of the [Bioconductor](https://www.bioconductor.org/about/) project. After the counts have been generated, typical differential expression analyses can be done easily on a laptop, so we'll run this part of the analysis locally, instead of on the Xanadu cluster. 
 
@@ -956,7 +956,7 @@ plotCounts(dds, gene=lfcorder[1], intgroup=c("population","dose"))
 Here we've plotted the gene with the largest shrunken log2 fold change. 
 
 
-## 8. Getting gene annotations with `biomaRt`
+## 7. Getting gene annotations with `biomaRt`
 
 
 BioMart is software that can query a variety of biological databases. `biomaRt` is an R package we can use to build those queries. Here we'll use `biomaRt` to retrieve gene annotations from the Ensembl database. 
@@ -984,20 +984,20 @@ mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="ensembl.org")
 	# at the time of writing, there were 203
 listDatasets(mart)
 
-# figure out which dataset is the croaker
+# figure out which dataset is the killifish
 	# be careful using grep like this. verify the match is what you want
-searchDatasets(mart,pattern="lcrocea")
+searchDatasets(mart,pattern="Mummichog")
 
 # there's only one match, get the name
-croakerdata <- searchDatasets(mart,pattern="lcrocea")[,1]
+killidata <- searchDatasets(mart,pattern="Mummichog")[,1]
+
+# create an object for the killifish dataset
+killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", dataset = killidata)
 
 # if above there were connectivity issues and you used the alternative function then:
 	# select a mirror: 'www', 'uswest', 'useast', 'asia'
-	# croaker_mart <- useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", dataset = croakerdata, mirror = "useast")
+	# killi_mart <- useEnsembl(biomart = "ENSEMBL_MART_ENSEMBL", dataset = killidata, mirror = "useast")
 
-
-# create an object for the croaker dataset
-croaker_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", dataset = croakerdata)
 
 #########################
 # Query the mart/dataset
@@ -1005,31 +1005,36 @@ croaker_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", 
 
 # filters, attributes and values
 
-# see a list of all "filters" available for the lcrocea dataset.
+# see a list of all "filters" available for the mummichog dataset.
 	# at the time of writing, over 300
-listFilters(croaker_mart)
+listFilters(killi_mart)
 
 # see a list of all "attributes" available
 	# 129 available at the time of writing
-listAttributes(mart = croaker_mart, page="feature_page")
+listAttributes(mart = killi_mart, page="feature_page")
 
 # we can also search the attributes and filters
-searchAttributes(mart = croaker_mart, pattern = "ensembl_gene_id")
+searchAttributes(mart = killi_mart, pattern = "ensembl_gene_id")
 
-searchFilters(mart = croaker_mart, pattern="ensembl")
+searchFilters(mart = killi_mart, pattern="ensembl")
 
 # get gene names and transcript lengths when they exist
-ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","transcript_length"),mart=croaker_mart)
+ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","transcript_length"),mart=killi_mart)
 
 # pick only the longest transcript for each gene ID
 ann <- group_by(ann, ensembl_gene_id) %>% 
-  summarize(.,description=unique(description),transcript_length=max(transcript_length))
+  summarize(.,description=unique(description),transcript_length=max(transcript_length)) %>%
+  as.data.frame()
 
-go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=croaker_mart)
+# get GO term info
+  # each row is a single gene ID to GO ID mapping, so the table has many more rows than genes in the analysis
+go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=killi_mart)
 
+# put results and annotation in the same table
+res_ann3 <- cbind(res_shrink3,ann)
 ```
 
-## 9. Gene ontology enrichment with `goseq` and `gProfiler`
+## 8. Gene ontology enrichment with `goseq` and `gProfiler`
 
 Once we have a set of differentially expressed genes, we want to understand their biological significance. While it can be useful to skim through the list of DE genes, looking for interesting hits, taking a large-scale overview is often also helpful. One way to do that is to look for enrichment of functional categories among the DE genes. There are many, many tools to accomplish that, using several different kinds of functional annotations. Here we'll look at enrichment of [gene ontology](http://geneontology.org/) terms. The Gene Ontology (GO) is a controlled vocabulary describing functional attributes of genes. Above, we retrieved GO terms for the genes we assayed in our experiment. Here we will ask whether they are over- (or under-) represented among our DE genes. 
 
@@ -1044,12 +1049,12 @@ We're going to use two tools: a Bioconductor package, `goseq` and a web-based pr
 ```R
 library(goseq)
 
-# 0/1 vector for DE/not DE
-de <- as.numeric(res$padj < 0.1)
-names(de) <- rownames(res)
+# 0/1 vector for DE/not DE, excluding genes with no p-values
+de <- as.numeric(res3$padj[!is.na(res3$padj)] < 0.1)
+names(de) <- rownames(res3)[!is.na(res3$padj)]
 
-# length of each gene (already extracted using biomart)
-len <- ann[[3]]
+# length of each gene,  excluding genes with no p-values
+len <- ann[[3]][!is.na(res3$padj)]
 ```
 
 Now we can start the analysis:
@@ -1078,17 +1083,19 @@ And that's it. We now have our output, and we can explore it a bit. Here we'll j
 head(GO.wall)
 
 # identify ensembl gene IDs annotated with to 2nd from top enriched GO term
+  # this category contains Aryl hydrocarbon receptor. 
 g <- go_ann$go_id==GO.wall[2,1]
 gids <- go_ann[g,1]
 
 # inspect DE results for those genes
-res_ann[gids,]
+res_ann3[gids,] %>% data.frame()
+
 
 # plot log2 fold changes for those genes, sorted
-ord <- order(res_ann[gids,]$log2FoldChange)
-plot(res_ann[gids,]$log2FoldChange[ord],
+ord <- order(res_ann3[gids,]$log2FoldChange)
+plot(res_ann3[gids,]$log2FoldChange[ord],
      ylab="l2fc of genes in top enriched GO term",
-     col=(res_ann[gids,]$padj[ord] < 0.1) + 1,
+     col=(res_ann3[gids,]$padj[ord] < 0.1) + 1,
      pch=20,cex=.5)
 abline(h=0,lwd=2,lty=2,col="gray")
 
@@ -1097,11 +1104,11 @@ abline(h=0,lwd=2,lty=2,col="gray")
 We can execute a similar analysis using the web server `gProfiler`. First, get a list of DE gene IDs:
 
 ```R
-cat(rownames(res)[res$padj < 0.1])
+cat(rownames(res3)[res3$padj < 0.1])
 ```
-Copy the text to your clipboard. Then visit [gProfiler](https://biit.cs.ut.ee/gprofiler/gost). Select _Laramichtys crocea_ as the organism. Paste the output into the query window and press "Run Query". Explore the results. We should see extremely similar enrichment terms. 
+Copy the text to your clipboard. Then visit [gProfiler](https://biit.cs.ut.ee/gprofiler/gost). Select _Fundulus heteroclitus_ as the organism. Paste the output into the query window and press "Run Query". Explore the results. We should see extremely similar enrichment terms. 
 
-A major difference between these analyses is the background set of genes considered. We only give `gProfiler` our list of DE genes. It compares those against the total set of gene annotations in _L. crocea_ (nearly 24,000 genes). `goseq`, by contrast, is using only the set of genes we included in the analysis (only about 14,000). 
+A major difference between these analyses is the background set of genes considered. We only give `gProfiler` our list of DE genes. It compares those against the total set of gene annotations in _F. heteroclitus_ (nearly 24,000 genes). `goseq`, by contrast, is using only the set of genes we included in the analysis (only about 20,000). 
 
 
 ## Writing out results
@@ -1110,24 +1117,24 @@ Finally, we can write somes results out to files like this:
 
 ```R
 # set a prefix for output file names
-outputPrefix <- "Croaker_DESeq2"
+outputPrefix <- "killifish_DESeq2"
 
 # save data results and normalized reads to csv
 resdata <- merge(
-	as.data.frame(res_shrink), 
-	as.data.frame(counts(dds,normalized =TRUE)), 
-	by = 'row.names', sort = FALSE
-	)
+  as.data.frame(res_shrink), 
+  as.data.frame(counts(dds,normalized =TRUE)), 
+  by = 'row.names', sort = FALSE
+)
 names(resdata)[1] <- 'gene'
 
 write.csv(resdata, file = paste0(outputPrefix, "-results-with-normalized.csv"))
 
 # send normalized counts to tab delimited file for GSEA, etc.
 write.table(
-	as.data.frame(counts(dds),normalized=T), 
-	file = paste0(outputPrefix, "_normalized_counts.txt"), 
-	sep = '\t'
-	)
+  as.data.frame(counts(dds),normalized=T), 
+  file = paste0(outputPrefix, "_normalized_counts.txt"), 
+  sep = '\t'
+)
 
 ```
 

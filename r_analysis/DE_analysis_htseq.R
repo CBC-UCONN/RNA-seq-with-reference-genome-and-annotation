@@ -327,7 +327,7 @@ killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", da
 
 # filters, attributes and values
 
-# see a list of all "filters" available for the lcrocea dataset.
+# see a list of all "filters" available for the mummichog dataset.
 	# at the time of writing, over 300
 listFilters(killi_mart)
 
@@ -368,7 +368,7 @@ res_ann4 <- cbind(res_shrink4,ann)
 ######################################################
 
 # first use 'goseq', a bioconductor package
-  # goseq can automatically pull annotations for some organisms, but not L crocea. 
+  # goseq can automatically pull annotations for some organisms, but not F heteroclitus. 
   # we need to put together our own input data:
     # a vector of 1/0 for each gene, indicating DE/not DE
     # a vector of transcript lengths (the method tries to account for this source of bias)
