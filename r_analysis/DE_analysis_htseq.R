@@ -1,13 +1,15 @@
 # this R code has been condensed from the tutorial here: 
 	# github.com/CBC-UCONN/RNA-seq-with-reference-genome-and-annotation
 
-
 # Load the libraries we'll need in the following code:
 library("DESeq2")
 library("apeglm")
 library("pheatmap")
 library("tidyverse")
 library("ggrepel")
+library("ashr")
+library("goseq")
+library("biomaRt")
 
 ######################################################
 # Point R to count data, set an output file prefix 
@@ -20,7 +22,7 @@ directory <- "../06_count/counts"
 # ensure the count files are where you think they are
 list.files(directory)
 
-sampleFiles <- list.files(directory, pattern = ".*counts")
+sampleFiles <- list.files(directory, pattern = ".*counts$")
 
 
 ######################################################
@@ -146,7 +148,7 @@ res4 <- results(dds, name="population_ER_vs_KC")
 
 # get a quick summary of the table
 summary(res1)
-summary(res2)
+summary(res2) # note that independent filtering goes haywire here b/c very few significant genes
 summary(res3)
 summary(res4)
 
@@ -179,7 +181,7 @@ res_shrink4 <- lfcShrink(dds,type="ashr",coef="population_ER_vs_KC")
 
 # get the top 20 genes by shrunken log2 fold change
 	# this will include genes with outliers
-arrange(data.frame(res_shrink1), log2FoldChange) %>% head(., n=20)
+arrange(data.frame(res_shrink1), -abs(log2FoldChange)) %>% head(., n=20)
 
 
 ######################################################
@@ -284,19 +286,20 @@ plotCounts(dds, gene=lfcorder[9], intgroup=c("population","dose"))
 ######################################################
 
 
-# load biomaRt
-library(biomaRt) 
-
-
 ##############################
 # Select a mart and dataset
 ##############################
 
-# see a list of "marts" available at host "ensembl.org"
-listMarts(host="ensembl.org")
+# ensembl host:
+  # most recent is "https://ensembl.org"
+  # to list archived version hosts: listEnsemblArchives()
+
+ensemblhost <- "https://jul2022.archive.ensembl.org"
+
+listMarts(host=ensemblhost)
 
 # create an object for the Ensembl Genes v100 mart
-mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host="ensembl.org")
+mart <- useMart(biomart="ENSEMBL_MART_ENSEMBL", host=ensemblhost)
 
 # occasionally ensembl will have connectivity issues. we can try an alternative function:
 	# select a mirror: 'www', 'uswest', 'useast', 'asia'
@@ -314,7 +317,7 @@ searchDatasets(mart,pattern="Mummichog")
 killidata <- searchDatasets(mart,pattern="Mummichog")[,1]
 
 # create an object for the killifish dataset
-killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = "ensembl.org", dataset = killidata)
+killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = ensemblhost, dataset = killidata)
 
 # if above there were connectivity issues and you used the alternative function then:
 	# select a mirror: 'www', 'uswest', 'useast', 'asia'
@@ -375,8 +378,7 @@ res_ann4 <- cbind(res_shrink4,ann)
     # a table of gene ID to category IDs (in this case GO term IDs) 
 
 
-# load library `goseq`
-library(goseq)
+
 
 # 0/1 vector for DE/not DE
 de <- as.numeric(res3$padj[!is.na(res3$padj)] < 0.1)

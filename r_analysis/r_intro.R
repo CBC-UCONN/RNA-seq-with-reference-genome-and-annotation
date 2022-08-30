@@ -51,11 +51,11 @@ b
   b[2:4]
   
 # lists:
-c <- list(x=a,y=b)
-c
+g <- list(x=a,y=b)
+g
 
   # access parts of lists like this
-  c[[2]]
+  g[[2]]
 
 # arrays (or matrices)
 d <- matrix(nrow=5,ncol=2,data=1:10)
@@ -98,7 +98,7 @@ d[!f,]
 # you can create logical vectors like this:
 f <- d[,1] > 2
 
-# you can do arithmetic on logial vectors
+# you can do arithmetic on logical vectors
 
 TRUE + 1
 FALSE + 1
@@ -150,8 +150,8 @@ y <- x * 5 + rnorm(n=300,mean=25,sd=10)
 z <- data.frame(x,y)
 
 # plot the data
-hist(x)
-hist(y)
+hist(z$x)
+hist(z$y)
 plot(z$x,z$y)
 
 # fit a linear model
@@ -162,3 +162,28 @@ summary(model)
 
 # add trendline to plot
 abline(model,col="red")
+
+
+#############################################
+# tidyverse and "pipes"
+#############################################
+
+# above we have used 'base' R. a very commonly used set of packages
+# fall under the umbrella of the 'tidyverse' project. 
+# in the DE analysis we'll use some tidyverse functions,
+# but one major piece of syntax to be aware of is the "pipe"
+
+library(tidyverse)
+
+sum(a)
+
+a %>% sum()
+
+a %>% sum() %>% sqrt()
+
+w <- a %>% 
+    sum() %>% 
+    sqrt() %>% 
+    (function(x){x^5})
+
+w
