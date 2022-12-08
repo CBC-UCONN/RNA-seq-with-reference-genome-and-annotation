@@ -27,7 +27,7 @@ This tutorial assumes you will be working on UConn's Xanadu cluster. So before b
 To work through this tutorial, copy it to your home directory using the `git clone` command and entering the tutorial directory:
 
 ```bash
-git clone git@github.com:CBC-UCONN/RNA-seq-with-reference-genome-and-annotation.git rnaseq-tutorial 
+git clone https://github.com/CBC-UCONN/RNA-seq-with-reference-genome-and-annotation.git rnaseq-tutorial 
 cd rnaseq-tutorial
 ```  
 
