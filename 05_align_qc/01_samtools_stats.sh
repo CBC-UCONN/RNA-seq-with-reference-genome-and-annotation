@@ -20,7 +20,7 @@ date
 # calculate alignment statistics for each bam file using samtools
 
 # load software--------------------------------------------------------------------------
-module load samtools/1.10
+module load samtools/1.16.1
 module load parallel/20180122
 
 # input, output directories--------------------------------------------------------------
