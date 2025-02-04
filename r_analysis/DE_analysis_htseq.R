@@ -6,10 +6,15 @@ library("DESeq2")
 library("apeglm")
 library("pheatmap")
 library("tidyverse")
-library("ggrepel")
+library("dplyr")
 library("ashr")
 library("goseq")
 library("biomaRt")
+library("ggplot2")
+library("ggrepel")
+library("clusterProfiler")
+library("enrichplot")
+library("ggupset")
 
 ######################################################
 # Point R to count data, set an output file prefix 
@@ -17,7 +22,7 @@ library("biomaRt")
 
 # create an object with the directory containing your counts:
 	# !!edit this to point to your own count file directory!!
-directory <- "../06_count/counts"
+directory <- "06_count/counts"
 
 # ensure the count files are where you think they are
 list.files(directory)
@@ -30,7 +35,7 @@ sampleFiles <- list.files(directory, pattern = ".*counts$")
 ######################################################
 
 # load in metadata table
-meta <- read.csv("../01_raw_data/metadata.txt") %>%
+meta <- read.csv("01_raw_data/metadata.txt") %>%
 	mutate(population=str_replace(population, "Eliza.*", "ER")) %>%
 	mutate(population=str_replace(population, "King.*", "KC")) %>%
 	mutate(pcb_dosage = case_when(pcb_dosage == 0 ~ "control", pcb_dosage > 0 ~ "exposed"))
@@ -104,6 +109,11 @@ ddsHTSeq <- ddsHTSeq[keep,]
 
 dds <- DESeq(ddsHTSeq)
 
+######################################################
+# Plot dispersion estimates
+######################################################
+plotDispEsts(dds)
+
 
 ######################################################
 # Which results do we want?
@@ -148,6 +158,7 @@ res4 <- results(dds, name="population_ER_vs_KC")
 
 # get a quick summary of the table
 summary(res1)
+summary(res1b)
 summary(res2) # note that independent filtering goes haywire here b/c very few significant genes
 summary(res3)
 summary(res4)
@@ -231,7 +242,66 @@ p
 
 ##############
 
-# heatmap of DE genes
+##Just KC dose response
+vsd_kcdose <- vsd[which(res1$padj < 0.1),]
+
+dat <- plotPCA(vsd_kcdose,returnData=TRUE,intgroup=c("population","dose"))
+
+p <- ggplot(dat,aes(x=PC1,y=PC2,col=population, shape=dose))
+p <- p + geom_point() + 
+  xlab(paste("PC1: ", round(attr(dat,"percentVar")[1],2)*100, "% variation explained", sep="")) + 
+  ylab(paste("PC2: ", round(attr(dat,"percentVar")[2],2)*100, "% variation explained", sep="")) +
+  geom_label_repel(aes(label=name))
+p
+
+# heatmap of DE genes in Results 1 - 
+# 1) genes responding to exposure in KC, the sensitive population
+
+# create a metadata data frame to add to the heatmap
+df <- data.frame(colData(dds)[,c("population","dose")])
+rownames(df) <- colnames(dds)
+colnames(df) <- c("population","dose")
+
+# pull the top 30 genes by shrunken log2 fold change
+top30_KCDose <- res_shrink1 %>% 
+  data.frame() %>%
+  filter(padj < 0.1) %>%
+  arrange(-abs(log2FoldChange)) %>%
+  rownames %>%
+  head(n=30)
+
+# make the heatmap
+pheatmap(
+  assay(vsd)[top30_KCDose,], 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df
+)
+
+##heatmap with pearson correlation
+pheatmap(
+  assay(vsd)[top30_KCDose,], 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df,
+  clustering_distance_rows="correlation"
+)
+##heatmap with values rescaled by base mean
+rescaled <- assay(vsd) - rowMeans(assay(vsd))
+
+pheatmap(
+  rescaled[top30_KCDose,], 
+  cluster_rows=TRUE, 
+  show_rownames=TRUE,
+  cluster_cols=TRUE,
+  annotation_col=df,
+  clustering_distance_rows="correlation"
+)
+
+###heatmap for results 3: using regularized log scaled counts
+  #genes that respond differently to exposure in ER and KC
 
 # regularized log transformation of counts
 rld <- rlog(dds, blind=FALSE)
@@ -242,11 +312,6 @@ lfcorder <- data.frame(res_shrink3) %>%
   arrange(-abs(log2FoldChange)) %>% 
   rownames() 
 
-# create a metadata data frame to add to the heatmaps
-df <- data.frame(colData(dds)[,c("population","dose")])
-  rownames(df) <- colnames(dds)
-  colnames(df) <- c("population","dose")
-
 # use regularized log-scaled counts
 pheatmap(
   assay(rld)[lfcorder[1:30],], 
@@ -254,7 +319,7 @@ pheatmap(
   show_rownames=TRUE,
   cluster_cols=TRUE,
   annotation_col=df
-  )
+)
 
 # re-scale regularized log-scaled counts by baseMean (estimated mean across all samples)
 pheatmap(
@@ -263,7 +328,7 @@ pheatmap(
   show_rownames=TRUE,
   cluster_cols=TRUE,
   annotation_col=df
-  )
+)
 
 # re-scale regularized log-scaled counts by reference level (KC control samples)
 pheatmap(
@@ -272,14 +337,19 @@ pheatmap(
   show_rownames=TRUE,
   cluster_cols=TRUE,
   annotation_col=df
-  )
-
+)
 
 ##############
 
 # plot counts for individual genes
 
 plotCounts(dds, gene=lfcorder[9], intgroup=c("population","dose"))
+
+##or take a look at results 1:
+as.data.frame(res1) %>% arrange(pvalue) %>% head(n=10)
+
+plotCounts(dds, gene="ENSFHEG00000008855", intgroup=c("population","dose"))
+plotCounts(dds, gene="ENSFHEG00000021655", intgroup=c("population","dose"))
 
 ######################################################
 # Get gene annotations using biomaRt
@@ -294,7 +364,7 @@ plotCounts(dds, gene=lfcorder[9], intgroup=c("population","dose"))
   # most recent is "https://ensembl.org"
   # to list archived version hosts: listEnsemblArchives()
 
-ensemblhost <- "https://jul2022.archive.ensembl.org"
+ensemblhost <- "https://oct2024.archive.ensembl.org"
 
 listMarts(host=ensemblhost)
 
@@ -311,7 +381,7 @@ listDatasets(mart)
 
 # figure out which dataset is the killifish
 	# be careful using grep like this. verify the match is what you want
-searchDatasets(mart,pattern="Mummichog")
+searchDatasets(mart,pattern="fheteroclitus_gene_ensembl")
 
 # there's only one match, get the name
 killidata <- searchDatasets(mart,pattern="Mummichog")[,1]
@@ -335,7 +405,7 @@ killi_mart <- useMart(biomart = "ENSEMBL_MART_ENSEMBL", host = ensemblhost, data
 listFilters(killi_mart)
 
 # see a list of all "attributes" available
-	# 129 available at the time of writing
+	# 130 available at the time of writing
 listAttributes(mart = killi_mart, page="feature_page")
 
 # we can also search the attributes and filters
@@ -344,117 +414,92 @@ searchAttributes(mart = killi_mart, pattern = "ensembl_gene_id")
 searchFilters(mart = killi_mart, pattern="ensembl")
 
 # get gene names and transcript lengths when they exist
-ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","transcript_length"),mart=killi_mart)
+ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","transcript_length","external_gene_name"),mart=killi_mart)
 
 # pick only the longest transcript for each gene ID
 ann <- group_by(ann, ensembl_gene_id) %>% 
-  summarize(.,description=unique(description),transcript_length=max(transcript_length)) %>%
+  summarize(.,description=unique(description),external_gene_name=unique(external_gene_name),transcript_length=max(transcript_length)) %>%
   as.data.frame()
 
 # get GO term info
   # each row is a single gene ID to GO ID mapping, so the table has many more rows than genes in the analysis
-go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","go_id","name_1006","namespace_1003"),mart=killi_mart)
+go_ann <- getBM(filter="ensembl_gene_id",value=rownames(res1),attributes=c("ensembl_gene_id","description","go_id","name_1006","definition_1006","namespace_1003"),mart=killi_mart)
 
-# get KEGG info
-# kegg_ann <- getBM(filter="ensembl_gene_id",value=rownames(res),attributes=c("ensembl_gene_id","description","kegg_enzyme"),mart=killi_mart)
-
+#let's look at the annotation:
+filter(ann, description!="") %>% head()
+head(ann)
+# and Go term:
+head(go_ann)
 # put results and annotation in the same table
-res_ann1 <- cbind(res_shrink1,ann)
-res_ann2 <- cbind(res_shrink2,ann)
-res_ann3 <- cbind(res_shrink3,ann)
-res_ann4 <- cbind(res_shrink4,ann)
+as.data.frame(res1)
 
+res1_data <- res1 %>% 
+  as.data.frame() %>%
+  rownames_to_column(var = "ensembl_gene_id") 
 
+res1_ann <- merge(x=res1_data,y=ann, by.x="ensembl_gene_id", by.y="ensembl_gene_id", all.x=TRUE)
 
-######################################################
-# Do a couple GO enrichment analyses
-######################################################
+## Over-representation and GSEA with clusterProfiler
 
-# first use 'goseq', a bioconductor package
-  # goseq can automatically pull annotations for some organisms, but not F heteroclitus. 
-  # we need to put together our own input data:
-    # a vector of 1/0 for each gene, indicating DE/not DE
-    # a vector of transcript lengths (the method tries to account for this source of bias)
-    # a table of gene ID to category IDs (in this case GO term IDs) 
+# get ENSEMBL gene IDs for genes with padj < 0.1
+genes <- rownames(res1[which(res1$padj < 0.1),])
+# get ENSEMBL gene IDs for universe (all genes with non-NA padj passed independent filtering)
+univ <- rownames(res1[!is.na(res1$padj),])
+# pull out the columns of go_ann containing GO IDs and descriptions, keep only unique entries. 
+go_ann[,c(3,4)] %>% head()
+gonames <- unique(go_ann[,c(3,4)]) %>% unique()
 
-
-
-
-# 0/1 vector for DE/not DE
-de <- as.numeric(res3$padj[!is.na(res3$padj)] < 0.1)
-names(de) <- rownames(res3)[!is.na(res3$padj)]
-# length of each gene
-len <- ann[[3]][!is.na(res3$padj)]
-
-# first try to account for transcript length bias by calculating the
-# probability of being DE based purely on gene length
-pwf <- nullp(DEgenes=de,bias.data=len)
-
-# use the Wallenius approximation to calculate enrichment p-values
-GO.wall <- goseq(pwf=pwf,gene2cat=go_ann[,c(1,3)])
-
-# do FDR correction on p-values using Benjamini-Hochberg, add to output object
-GO.wall <- cbind(
-  GO.wall,
-  padj_overrepresented=p.adjust(GO.wall$over_represented_pvalue, method="BH"),
-  padj_underrepresented=p.adjust(GO.wall$under_represented_pvalue, method="BH")
-  )
-
-# explore the results
-
-head(GO.wall)
-
-# identify ensembl gene IDs annotated with to 2nd from top enriched GO term
-  
-g <- go_ann$go_id==GO.wall[2,1]
-gids <- go_ann[g,1]
-
-# inspect DE results for those genes
-res_ann3[gids,] %>% data.frame()
-
-
-# plot log2 fold changes for those genes, sorted
-ord <- order(res_ann3[gids,]$log2FoldChange)
-plot(res_ann3[gids,]$log2FoldChange[ord],
-     ylab="l2fc of genes in top enriched GO term",
-     col=(res_ann3[gids,]$padj[ord] < 0.1) + 1,
-     pch=20,cex=.5)
-abline(h=0,lwd=2,lty=2,col="gray")
-
-
-########################
-
-# we can also run a similar analysis using the web platform gProfiler
-
-# execute the following code, then copy the all ensembl gene IDs printed to the screen to your clipboard
-cat(rownames(res3)[which(res3$padj < 0.1)])
-
-# then visit biit.cs.ut.ee/gprofiler/gost
-# select Laramichtys crocea as the organism
-# paste the output into the query window and press "Run Query"
-# if you explore the results, you'll see they are very similar. 
-
-######################################################
-# Save some of the results to a table
-######################################################
-
-# set a prefix for output file names
-outputPrefix <- "killifish_DESeq2"
-
-# save data results and normalized reads to csv
-resdata <- merge(
-  as.data.frame(res_shrink), 
-  as.data.frame(counts(dds,normalized =TRUE)), 
-  by = 'row.names', sort = FALSE
+res1_enrich <- enricher(
+  gene=genes,
+  universe=univ,
+  TERM2GENE=go_ann[,c(3,1)],
+  TERM2NAME=gonames
 )
-names(resdata)[1] <- 'gene'
 
-write.csv(resdata, file = paste0(outputPrefix, "-results-with-normalized.csv"))
+as.data.frame(res1_enrich) %>% head()
 
-# send normalized counts to tab delimited file for GSEA, etc.
-write.table(
-  as.data.frame(counts(dds),normalized=T), 
-  file = paste0(outputPrefix, "_normalized_counts.txt"), 
-  sep = '\t'
-)
+# GeneRatio: number of DE genes in category / total DE genes
+# BgRation: total genes in category / total genes considered
+# pvalue: raw p-value
+# p.adjust fdr adjusted p-value (BH method)
+# qvalue: alternative fdr adjusted p-value
+
+#### Gene-set enrichment analysis
+  # determine if functional categories tend to be enriched for higher or lower expression levels
+  #shrunken or raw log2fc? depends on preference for smoothing noise but reducing signal
+
+# extract log2 fold changes, only for genes that passed independent filtering. 
+l2fcs <- as.data.frame(res1) %>% 
+  filter(!is.na(padj)) %>%
+  select(log2FoldChange)
+View(l2fcs)
+
+# put log2FCs in a vector, add gene IDs as names, sort 
+l2fcvec <- l2fcs[,1]
+names(l2fcvec) <- rownames(l2fcs)
+View(l2fcvec)
+l2fcvec <- sort(l2fcvec, decreasing=TRUE)
+View(l2fcvec)
+
+res1_gsea <- GSEA(
+  geneList=l2fcvec,
+  TERM2GENE=go_ann[,c(3,1)],
+  TERM2NAME=gonames
+) 
+
+
+##Upregualted term: 
+gseaplot(res1_gsea, by = "all", title = res1_enrich$Description[2], geneSetID = 2)
+gseaplot(res1_gsea, by = "all", title = res1_enrich$Description[1], geneSetID = 1)
+
+## GeneRatio in GSEA results: fraction of genes found in leading edge subset
+
+###visuals
+dotplot(res1_enrich)
+dotplot(res1_gsea)
+upsetplot(res1_enrich)
+upsetplot(res1_gsea)
+ridgeplot(res1_gsea,label_format=30)
+
+
 
