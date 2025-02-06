@@ -489,8 +489,8 @@ res1_gsea <- GSEA(
 
 
 ##Upregualted term: 
-gseaplot(res1_gsea, by = "all", title = res1_enrich$Description[2], geneSetID = 2)
-gseaplot(res1_gsea, by = "all", title = res1_enrich$Description[1], geneSetID = 1)
+gseaplot(res1_gsea, by = "all", title = res1_gsea$Description[2], geneSetID = 2)
+gseaplot(res1_gsea, by = "all", title = res1_gsea$Description[1], geneSetID = 1)
 
 ## GeneRatio in GSEA results: fraction of genes found in leading edge subset
 
